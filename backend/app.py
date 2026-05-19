@@ -1,73 +1,119 @@
+"""
+Main application entry point - FastAPI with async/await support.
+Replaces Flask with modern async framework while reusing existing models, services, repositories.
+"""
 import sys
 from pathlib import Path
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # Ensure backend is properly imported
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import time
-import os
-from datetime import datetime
-
-from flask import Flask, request, render_template, redirect, url_for, flash, session, Response
-from functools import wraps
-
-import cv2
-from flask_cors import CORS
-from backend.api import apiBlueprint
 from backend.config import Config
-from backend.extensions import db
-from backend.services.auth_service import AuthService
-from backend.services.face_recognition_service import FaceRecognitionService
-
-app = Flask(__name__)
-
-app.config.from_object(Config)
-
-if not app.config.get('SECRET_KEY'):
-    raise RuntimeError('SECRET_KEY is not configured. Set it in environment variables or .env file.')
-
-CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://localhost:3000"])
-
-# Initialize Celery with Flask app config
 from backend.celery_app import init_celery_config
-init_celery_config()
+from backend.extensions import db
+from backend.api.v1.auth_routes_fastapi import router as auth_router
+from backend.api.v1.student_routes_fastapi import router as student_router
+from backend.api.v1.faculty_routes_fastapi import router as faculty_router
+from backend.api.v1.attendance_routes_fastapi import router as attendance_router
+from backend.api.v1.recognition_routes_fastapi import router as recognition_router
 
-db.init_app(app)
-# Import models here as to avoid circular import issue
-from backend.models import *
 
-with app.app_context():
-    db.create_all()
+# Initialize database (using Flask app context for SQLAlchemy)
+def init_db():
+    """Initialize database with Flask app context."""
+    try:
+        from flask import Flask as FlaskApp
+        flask_app = FlaskApp(__name__)
+        flask_app.config.from_object(Config)
+        db.init_app(flask_app)
+        with flask_app.app_context():
+            db.create_all()
+            print("[DB] Database initialized")
+    except Exception as e:
+        print(f"[WARN] Database initialization: {e}")
 
-app.register_blueprint(apiBlueprint)
 
-@app.route('/')
-def index():
-    return {'message': 'Attendance API - Use frontend SPA'}, 200
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events."""
+    # Startup
+    init_db()
+    init_celery_config()
+    print("[START] FastAPI initialized with Celery enabled")
+    yield
+    # Shutdown
+    print("[STOP] FastAPI shutdown")
 
-@app.route('/health')
-def health():
-    return {'status': 'ok'}, 200
 
-# Legacy routes below - DISABLED (use API instead)
-# All UI is now handled by React frontend on separate port
-# Keep for reference but don't use - will fail because templates folder was deleted
+# Create FastAPI app
+app = FastAPI(
+    title="Facial Recognition Attendance API",
+    description="Modern async API for facial recognition attendance system",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
-"""
-@app.route('/login_student', methods=['GET', 'POST'])
-def login_student():
-    ...
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.route('/login_faculty', methods=['GET', 'POST'])
-def login_faculty():
-    ...
 
-@app.route('/student')
-def student():
-    ...
+# Register routers
+app.include_router(auth_router, prefix="/api/v1", tags=["Authentication"])
+app.include_router(student_router, prefix="/api/v1", tags=["Students"])
+app.include_router(faculty_router, prefix="/api/v1", tags=["Faculty"])
+app.include_router(attendance_router, prefix="/api/v1", tags=["Attendance"])
+app.include_router(recognition_router, prefix="/api/v1", tags=["Recognition"])
 
-[all other legacy routes commented out]
-"""
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "ok", "service": "facial-recognition-api"}
+
+
+@app.get("/")
+async def root():
+    """Root endpoint with API info."""
+    return {
+        "message": "Attendance API - Use frontend SPA or /docs for API documentation",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """Custom HTTP exception handler."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "data": None,
+            "error": {"message": exc.detail, "code": exc.status_code}
+        }
+    )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    # Run server
+    uvicorn.run(
+        "backend.app:app",
+        host="0.0.0.0",
+        port=5000,
+        reload=True,
+        log_level="info"
+    )
+
