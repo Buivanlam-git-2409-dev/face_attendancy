@@ -4,7 +4,6 @@ import bcrypt
 from functools import wraps
 from datetime import datetime, timedelta
 from flask import session, flash, redirect, url_for, request
-from config import Config
 
 def hash_password(password: str) -> str:
     """
@@ -50,7 +49,7 @@ def verify_password(password: str, hashed: str) -> bool:
     except ValueError:
         return False
 
-def generate_token(user_id: int, role: str, is_admin: bool = False, expires_in_hours: int = 24) -> str:
+def generate_token(user_id: int, role: str, is_admin: bool = False, expires_in_hours: int = 24, secret_key: str = None) -> str:
     """
     Generate a JWT token for authenticated user
     
@@ -59,10 +58,15 @@ def generate_token(user_id: int, role: str, is_admin: bool = False, expires_in_h
         role: User role ('student' or 'faculty')
         is_admin: Whether user is admin (faculty only)
         expires_in_hours: Token expiration time in hours
+        secret_key: Secret key for signing (uses app config if not provided)
         
     Returns:
         JWT token string
     """
+    if not secret_key:
+        from flask import current_app
+        secret_key = current_app.config.get('SECRET_KEY')
+    
     payload = {
         'user_id': user_id,
         'role': role,
@@ -70,9 +74,9 @@ def generate_token(user_id: int, role: str, is_admin: bool = False, expires_in_h
         'iat': datetime.utcnow(),
         'exp': datetime.utcnow() + timedelta(hours=expires_in_hours),
     }
-    return jwt.encode(payload, Config.SECRET_KEY, algorithm='HS256')
+    return jwt.encode(payload, secret_key, algorithm='HS256')
 
-def generate_refresh_token(user_id: int, role: str, expires_in_days: int = 7) -> str:
+def generate_refresh_token(user_id: int, role: str, expires_in_days: int = 7, secret_key: str = None) -> str:
     """
     Generate a refresh token for getting new access tokens
     
@@ -80,10 +84,15 @@ def generate_refresh_token(user_id: int, role: str, expires_in_days: int = 7) ->
         user_id: User ID
         role: User role
         expires_in_days: Token expiration time in days
+        secret_key: Secret key for signing (uses app config if not provided)
         
     Returns:
         Refresh token string
     """
+    if not secret_key:
+        from flask import current_app
+        secret_key = current_app.config.get('SECRET_KEY')
+    
     payload = {
         'user_id': user_id,
         'role': role,
@@ -91,20 +100,25 @@ def generate_refresh_token(user_id: int, role: str, expires_in_days: int = 7) ->
         'iat': datetime.utcnow(),
         'exp': datetime.utcnow() + timedelta(days=expires_in_days),
     }
-    return jwt.encode(payload, Config.SECRET_KEY, algorithm='HS256')
+    return jwt.encode(payload, secret_key, algorithm='HS256')
 
-def verify_token(token: str) -> dict:
+def verify_token(token: str, secret_key: str = None) -> dict:
     """
     Verify and decode a JWT token
     
     Args:
         token: JWT token string
+        secret_key: Secret key for verification (uses app config if not provided)
         
     Returns:
         Token payload dict if valid, None if invalid
     """
+    if not secret_key:
+        from flask import current_app
+        secret_key = current_app.config.get('SECRET_KEY')
+    
     try:
-        payload = jwt.decode(token, Config.SECRET_KEY, algorithms=['HS256'])
+        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
         if payload.get('type') == 'refresh':
             return None
         return payload
@@ -113,18 +127,23 @@ def verify_token(token: str) -> dict:
     except jwt.InvalidTokenError:
         return None
 
-def verify_refresh_token(token: str) -> dict:
+def verify_refresh_token(token: str, secret_key: str = None) -> dict:
     """
     Verify and decode a refresh token
     
     Args:
         token: Refresh token string
+        secret_key: Secret key for verification (uses app config if not provided)
         
     Returns:
         Token payload dict if valid, None if invalid
     """
+    if not secret_key:
+        from flask import current_app
+        secret_key = current_app.config.get('SECRET_KEY')
+    
     try:
-        payload = jwt.decode(token, Config.SECRET_KEY, algorithms=['HS256'])
+        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
         if payload.get('type') != 'refresh':
             return None
         return payload

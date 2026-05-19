@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+# Ensure backend is properly imported
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import time
 import os
 from datetime import datetime
@@ -8,7 +14,7 @@ from functools import wraps
 import cv2
 from flask_cors import CORS
 from backend.api import apiBlueprint
-from config import Config
+from backend.config import Config
 from backend.extensions import db
 from backend.services.auth_service import AuthService
 from backend.services.face_recognition_service import FaceRecognitionService
@@ -22,9 +28,13 @@ if not app.config.get('SECRET_KEY'):
 
 CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://localhost:3000"])
 
+# Initialize Celery with Flask app config
+from backend.celery_app import init_celery_config
+init_celery_config()
+
 db.init_app(app)
 # Import models here as to avoid circular import issue
-from models import *
+from backend.models import *
 
 with app.app_context():
     db.create_all()

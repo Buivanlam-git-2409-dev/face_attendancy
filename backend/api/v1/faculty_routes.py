@@ -3,7 +3,7 @@ from flask import request, session
 from backend.api.v1 import v1Blueprint
 from backend.api.v1.responses import errorResponse, successResponse
 from backend.services.auth_service import AuthService
-from models import Faculty
+from backend.models import Faculty
 from backend.extensions import db
 
 

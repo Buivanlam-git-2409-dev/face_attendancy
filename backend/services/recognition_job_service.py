@@ -1,10 +1,9 @@
 import uuid
 from datetime import datetime
 
-from celery_app import celeryApp
-from config import Config
+from backend.celery_app import celeryApp
 from backend.extensions import db
-from models import RecognitionJob
+from backend.models import RecognitionJob
 from backend.services.face_recognition_service import FaceRecognitionService
 
 

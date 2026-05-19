@@ -1,4 +1,4 @@
-from models import Student
+from backend.models import Student
 
 
 class StudentService:
