@@ -2,7 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './shared/ui/ProtectedRoute'
-import HomeDashboard from './pages/HomeDashboard'
+import LandingPage from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { StudentDashboard } from './pages/StudentDashboard'
 import { FacultyDashboard } from './pages/FacultyDashboard'
@@ -13,9 +13,28 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<HomeDashboard />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           
+          <Route
+            path="/dashboard/student"
+            element={
+              <ProtectedRoute requiredRole="student">
+                <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/dashboard/faculty"
+            element={
+              <ProtectedRoute requiredRole="faculty">
+                <FacultyDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Keep old routes for backward compatibility */}
           <Route
             path="/student/dashboard"
             element={

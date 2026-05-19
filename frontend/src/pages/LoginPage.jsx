@@ -1,21 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { 
-  Button, 
-  Input, 
-  Select, 
-  Alert, 
-  Card 
-} from '../shared/ui'
+import { GradientButton } from '../shared/ui/GradientButton/GradientButton'
+import { GlassPanel } from '../shared/ui/GlassPanel/GlassPanel'
+import { Input, Select, Alert } from '../shared/ui'
 import './LoginPage.css'
 
 export const LoginPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
-  
-  // Extract role from query params
+
   const queryParams = new URLSearchParams(location.search)
   const initialRole = queryParams.get('role') || 'student'
 
@@ -25,7 +20,6 @@ export const LoginPage = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Update role if query param changes
   useEffect(() => {
     const newRole = queryParams.get('role')
     if (newRole && (newRole === 'student' || newRole === 'faculty')) {
@@ -41,9 +35,9 @@ export const LoginPage = () => {
     const result = await login(email, password, role)
     if (result.success) {
       if (result.role === 'student') {
-        navigate('/student/dashboard')
+        navigate('/dashboard/student')
       } else {
-        navigate('/faculty/dashboard')
+        navigate('/dashboard/faculty')
       }
     } else {
       setError(result.error || 'Login failed')
@@ -53,69 +47,101 @@ export const LoginPage = () => {
 
   const roleOptions = [
     { value: 'student', label: 'Student' },
-    { value: 'faculty', label: 'Faculty' }
+    { value: 'faculty', label: 'Faculty' },
   ]
 
   return (
     <div className="login-container">
+      <div className="login-background" />
+
       <div className="login-wrapper">
-        <div className="login-brand">
-          <h1>Attendance System</h1>
-          <p>Automated school attendance with AI-driven facial recognition.</p>
-        </div>
-        
-        <Card className="login-card">
-          <form onSubmit={handleSubmit}>
-            <h2 className="login-title">Sign In</h2>
-            
-            {error && <Alert variant="error" className="mb-4">{error}</Alert>}
+        <Link to="/" className="login-back">
+          ← Back
+        </Link>
 
-            <Select 
-              label="Select Role"
-              id="role"
-              value={role} 
-              onChange={(e) => setRole(e.target.value)}
-              options={roleOptions}
-              disabled={loading}
-            />
+        <GlassPanel className="login-card" elevated animated>
+          <div className="login-brand">
+            <span className="login-logo">📚</span>
+            <h1>AttendanceAI</h1>
+            <p>Secure. Fast. Reliable.</p>
+          </div>
 
-            <Input
-              label="Email Address"
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@university.edu"
-              required
-              disabled={loading}
-            />
+          <form onSubmit={handleSubmit} className="login-form">
+            <h2 className="login-title">Welcome Back</h2>
 
-            <Input
-              label="Password"
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              disabled={loading}
-            />
+            {error && (
+              <Alert variant="error" className="login-error">
+                {error}
+              </Alert>
+            )}
 
-            <Button 
-              type="submit" 
-              className="w-full mt-4" 
-              disabled={loading}
+            <div className="form-group">
+              <label htmlFor="role" className="form-label">
+                I am a
+              </label>
+              <Select
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                options={roleOptions}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">
+                Email Address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@university.edu"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            <GradientButton
+              type="submit"
+              variant="navy-gold"
               size="lg"
+              loading={loading}
+              className="login-button"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Button>
+              Sign In
+            </GradientButton>
           </form>
-        </Card>
-        
-        <footer className="login-footer">
-          &copy; {new Date().getFullYear()} Attendance Management System
-        </footer>
+
+          <p className="login-footer">
+            Don't have an account?{' '}
+            <a href="#signup" className="login-link">
+              Contact your institution
+            </a>
+          </p>
+        </GlassPanel>
+
+        <p className="login-copyright">
+          © {new Date().getFullYear()} AttendanceAI. All rights reserved.
+        </p>
       </div>
     </div>
   )
 }
+

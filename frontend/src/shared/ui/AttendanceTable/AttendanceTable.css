@@ -1,0 +1,154 @@
+.attendance-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.attendance-table__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--ui-color-surface);
+  border-radius: var(--ui-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.attendance-table__table thead {
+  background: linear-gradient(135deg, #1a365d 0%, #2d5a96 100%);
+  color: white;
+}
+
+.attendance-table__table th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.attendance-table__table td {
+  padding: 14px 16px;
+  border-top: 1px solid var(--ui-color-border);
+  font-size: 14px;
+  color: var(--ui-color-text);
+}
+
+.attendance-table__table tbody tr {
+  transition: background-color 0.3s ease;
+}
+
+.attendance-table__table tbody tr:hover {
+  background-color: var(--ui-color-surface-alt);
+}
+
+.attendance-table__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: var(--ui-radius-sm);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge--present {
+  background: var(--ui-color-success-bg);
+  color: var(--ui-color-teal-primary);
+}
+
+.badge--absent {
+  background: var(--ui-color-danger-bg);
+  color: var(--ui-color-danger);
+}
+
+.badge--late {
+  background: var(--ui-color-warning-bg);
+  color: var(--ui-color-gold-dark);
+}
+
+.badge--pending {
+  background: #f0f0f0;
+  color: #666;
+}
+
+/* Empty state */
+.table-empty,
+.table-error,
+.table-loader {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--ui-color-text-muted);
+}
+
+.table-empty p,
+.table-error p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.table-error {
+  color: var(--ui-color-danger);
+}
+
+.error-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--ui-color-danger);
+}
+
+.error-message {
+  font-size: 14px;
+  color: var(--ui-color-text-muted);
+}
+
+/* Loading state */
+.table-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loader-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--ui-color-border);
+  border-top-color: var(--ui-color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .attendance-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .attendance-table__table th,
+  .attendance-table__table td {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+
+  .attendance-table__table th {
+    font-size: 12px;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}

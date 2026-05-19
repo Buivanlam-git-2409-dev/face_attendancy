@@ -1,0 +1,123 @@
+.stat-card {
+  background: var(--ui-color-surface);
+  border-radius: var(--ui-radius-lg);
+  padding: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  border: 1px solid var(--ui-color-border);
+  transition: all 0.3s ease;
+  box-shadow: var(--ui-shadow-sm);
+}
+
+.stat-card:hover {
+  box-shadow: var(--ui-shadow-md);
+  border-color: var(--ui-color-gold-primary);
+  transform: translateY(-4px);
+}
+
+.stat-card--animated {
+  animation: fadeUpIn 0.6s ease-out both;
+  animation-delay: var(--delay, 0ms);
+}
+
+.stat-card__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--ui-radius-md);
+  background: linear-gradient(135deg, #1a365d 0%, #319795 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.stat-card__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.stat-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-card__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ui-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.stat-card__value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ui-color-navy-primary);
+  margin: 0;
+  line-height: 1;
+}
+
+.stat-card__description {
+  font-size: 13px;
+  color: var(--ui-color-text-light);
+  margin: 0;
+}
+
+.stat-card__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--ui-radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  width: fit-content;
+  margin-top: 4px;
+}
+
+.stat-card__trend--up {
+  background: var(--ui-color-success-bg);
+  color: var(--ui-color-teal-dark);
+}
+
+.stat-card__trend--down {
+  background: var(--ui-color-danger-bg);
+  color: var(--ui-color-danger);
+}
+
+.stat-card__trend--stable {
+  background: var(--ui-color-warning-bg);
+  color: var(--ui-color-gold-dark);
+}
+
+.stat-card__trend-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 768px) {
+  .stat-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .stat-card__icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .stat-card__icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .stat-card__value {
+    font-size: 24px;
+  }
+}

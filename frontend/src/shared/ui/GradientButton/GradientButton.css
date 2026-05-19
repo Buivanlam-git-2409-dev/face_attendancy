@@ -1,0 +1,125 @@
+.gradient-btn {
+  position: relative;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 16px;
+  border: none;
+  border-radius: var(--ui-radius-md);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: var(--ui-font-body);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Navy to Gold gradient variant (primary) */
+.gradient-btn--navy-gold {
+  background: linear-gradient(135deg, #1a365d 0%, #2d5a96 50%, #c5a059 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(26, 54, 93, 0.2);
+}
+
+.gradient-btn--navy-gold:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0f1f3c 0%, #1a365d 50%, #9e7d41 100%);
+  box-shadow: 0 8px 25px rgba(26, 54, 93, 0.3);
+  transform: translateY(-2px);
+}
+
+.gradient-btn--navy-gold:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(26, 54, 93, 0.2);
+}
+
+/* Navy to Teal gradient variant */
+.gradient-btn--navy-teal {
+  background: linear-gradient(135deg, #1a365d 0%, #2d5a96 50%, #319795 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(26, 54, 93, 0.2);
+}
+
+.gradient-btn--navy-teal:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0f1f3c 0%, #1a365d 50%, #1d5a5a 100%);
+  box-shadow: 0 8px 25px rgba(26, 54, 93, 0.3);
+  transform: translateY(-2px);
+}
+
+.gradient-btn--navy-teal:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(26, 54, 93, 0.2);
+}
+
+/* Secondary variant (outline) */
+.gradient-btn--secondary {
+  background: transparent;
+  color: var(--ui-color-navy-primary);
+  border: 2px solid var(--ui-color-navy-primary);
+}
+
+.gradient-btn--secondary:hover:not(:disabled) {
+  background: var(--ui-color-off-white-alt);
+  border-color: var(--ui-color-navy-dark);
+  color: var(--ui-color-navy-dark);
+}
+
+/* Size variants */
+.gradient-btn--sm {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.gradient-btn--md {
+  padding: 12px 24px;
+  font-size: 16px;
+}
+
+.gradient-btn--lg {
+  padding: 16px 32px;
+  font-size: 18px;
+}
+
+/* States */
+.gradient-btn--disabled,
+.gradient-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.gradient-btn--loading {
+  color: transparent;
+}
+
+/* Loading spinner */
+.gradient-btn__spinner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Content container */
+.gradient-btn__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.gradient-btn__icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
