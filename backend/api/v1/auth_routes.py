@@ -24,7 +24,6 @@ def loginApi():
         student = AuthService.authenticateStudent(email=email, password=password)
         if student is None:
             return errorResponse("INVALID_CREDENTIALS", "Invalid login", 401)
-        session["std_logged_in"] = True
         session["roll_no"] = student.rollno
         return successResponse({
             "role": "student",
@@ -38,7 +37,6 @@ def loginApi():
     if role is None:
         student = AuthService.authenticateStudent(email=email, password=password)
         if student is not None:
-            session["std_logged_in"] = True
             session["roll_no"] = student.rollno
             return successResponse({
                 "role": "student",

@@ -129,12 +129,12 @@ def create_legacy_flask_app() -> Flask:
         if request.method == "POST":
             email = request.form["email"]
             password = request.form["password"]
-            student = Student.query.filter_by(email=email, password=password).first()
+            student = AuthService.authenticate_student(email=email, password=password)
 
             if student is not None:
-                session["std_logged_in"] = True
                 session["uname"] = email.split("@")[0]
                 session["roll_no"] = student.rollno
+                session["std_logged_in"] = True
                 flash("You are now logged in", "success")
                 return redirect(url_for("student"))
 
@@ -147,7 +147,7 @@ def create_legacy_flask_app() -> Flask:
         if request.method == "POST":
             email = request.form["email"]
             password = request.form["password"]
-            faculty = Faculty.query.filter_by(email=email, password=password).first()
+            faculty = AuthService.authenticate_faculty(email=email, password=password)
 
             if faculty is not None:
                 if faculty.is_admin:
@@ -227,24 +227,25 @@ def create_legacy_flask_app() -> Flask:
     @is_faculty_logged_in
     def register_faculty():
         if request.method == "POST":
-            existing_faculty = Faculty.query.filter_by(email=request.form["email"]).first()
+            name = request.form["name"]
+            course = request.form["course"]
+            email = request.form["email"]
+            password = request.form["password"]
             is_admin = "isAdmin" in request.form
 
-            if existing_faculty is None:
-                faculty = Faculty(
-                    name=request.form["name"],
-                    course=request.form["course"],
-                    email=request.form["email"],
-                    password=request.form["password"],
-                    is_admin=is_admin,
-                    registered_on=datetime.now(),
-                )
-                db.session.add(faculty)
-                db.session.commit()
+            faculty, error = AuthService.registerFaculty(
+                name=name,
+                course=course,
+                email=email,
+                password=password,
+                isAdmin=is_admin
+            )
+
+            if faculty:
                 flash("Faculty registration successful", "success")
                 return render_template("register_faculty.html")
 
-            flash("Faculty with this email already exists!", "danger")
+            flash(error or "Registration failed", "danger")
 
         return render_template("register_faculty.html")
 
@@ -252,32 +253,31 @@ def create_legacy_flask_app() -> Flask:
     @is_faculty_logged_in
     def register_student():
         if request.method == "POST":
-            existing_student = Student.query.filter_by(email=request.form["email"]).first()
+            rollno = request.form["rollno"]
+            name = request.form["name"]
+            semester = request.form["semester"]
+            email = request.form["email"]
+            password = request.form["password"]
 
-            if existing_student is None:
-                image_path = (
-                    f'static/images/users/{request.form["rollno"]}-'
-                    f'{request.form["name"]}.jpg'
-                )
-                new_student = Student(
-                    rollno=request.form["rollno"],
-                    name=request.form["name"],
-                    semester=request.form["semester"],
-                    email=request.form["email"],
-                    password=request.form["password"],
-                    pic_path=image_path,
-                    registered_on=datetime.now(),
-                )
-                db.session.add(new_student)
-                db.session.commit()
+            image_path = f"static/images/users/{rollno}-{name}.jpg"
 
+            student, error = AuthService.registerStudent(
+                rollno=int(rollno),
+                name=name,
+                semester=semester,
+                email=email,
+                password=password,
+                picPath=image_path
+            )
+
+            if student:
                 if os.path.isfile("static/images/users/temp.jpg"):
                     os.rename("static/images/users/temp.jpg", image_path)
                 session.pop("img_captured", None)
                 flash("Student registration successful", "success")
                 return render_template("register_student.html")
 
-            flash("Student with this email already exists!", "danger")
+            flash(error or "Registration failed", "danger")
 
         temp_pic = os.path.isfile("static/images/users/temp.jpg")
         return render_template("register_student.html", temp_pic=temp_pic)

@@ -29,8 +29,6 @@ This plan outlines the steps to transform the current "outdated" codebase into a
 - [x] **Introduce layered API modules** (`controller -> service -> repository -> model`) for new endpoints.
 - [x] **Implement core REST resources first:**
     - [x] `POST /api/v1/auth/login`
-    - [x] `POST /api/v1/auth/token`
-    - [x] `POST /api/v1/auth/refresh`
     - [x] `GET /api/v1/students`
     - [x] `GET /api/v1/students/{rollno}`
     - [x] `POST /api/v1/students/register`

@@ -1,30 +1,60 @@
-"""
-FastAPI Auth Routes
-Migration of Flask auth_routes.py to FastAPI with validation and logging.
-"""
-from fastapi import APIRouter, HTTPException
+# backend/api/v1/auth_routes_fastapi.py
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import structlog
 
-from backend.api.v1.validation_models import (
-    LoginRequest,
-    TokenRequest,
-    RefreshTokenRequest,
-)
+from backend.api.v1.validation_models import LoginRequest
 from backend.api.error_handler import error_response, success_response, ErrorCode
+from backend.security import generate_token, verify_token
 from backend.services.auth_service import AuthService
-from backend.security import (
-    generate_token,
-    generate_refresh_token,
-    verify_refresh_token,
-)
+
 
 router = APIRouter()
 log = structlog.get_logger(__name__)
 
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def unauthorized(message: str = "Unauthorized"):
+    response = error_response(ErrorCode.UNAUTHORIZED, message, 401)
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=response["error"],
+    )
+
+
+def invalid_credentials():
+    response = error_response(
+        ErrorCode.INVALID_CREDENTIALS,
+        "Invalid email or password",
+        401,
+    )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=response["error"],
+    )
+
+
+async def get_current_token_payload(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> dict:
+    if credentials is None:
+        unauthorized("Missing Authorization Bearer token")
+
+    if credentials.scheme.lower() != "bearer":
+        unauthorized("Invalid authorization scheme")
+
+    payload = verify_token(credentials.credentials)
+
+    if not payload:
+        unauthorized("Invalid or expired token")
+
+    return payload
+
 
 @router.post("/auth/login")
 async def login_api(payload: LoginRequest):
-    """Student/Faculty login with session support."""
     email = payload.email
     password = payload.password
     role = payload.role
@@ -32,159 +62,125 @@ async def login_api(payload: LoginRequest):
     log.info("login_attempt", email=email, role=role or "auto-detect")
 
     if role == "student":
-        student = AuthService.authenticateStudent(email=email, password=password)
-        if student is None:
-            log.warning("login_failed", email=email, reason="invalid_credentials", role="student")
-            response = error_response(
-                ErrorCode.INVALID_CREDENTIALS,
-                "Invalid login credentials",
-                400
-            )
-            raise HTTPException(status_code=400, detail=response["error"])
+        student = AuthService.authenticate_student(email=email, password=password)
 
-        log.info("login_success", email=email, rollno=student.rollno, role="student")
-        return success_response({
-            "role": "student",
-            "user": {
-                "rollno": student.rollno,
-                "name": student.name,
-                "email": student.email,
-            },
-        })
+        if not student:
+            log.warning("login_failed", email=email, role="student")
+            invalid_credentials()
 
-    if role is None:
-        student = AuthService.authenticateStudent(email=email, password=password)
-        if student is not None:
-            log.info("login_success", email=email, rollno=student.rollno, role="student")
-            return success_response({
-                "role": "student",
-                "user": {
-                    "rollno": student.rollno,
-                    "name": student.name,
-                    "email": student.email,
-                },
-            })
-
-    faculty = AuthService.authenticateFaculty(email=email, password=password)
-    if faculty is None:
-        log.warning("login_failed", email=email, reason="invalid_credentials", role="faculty")
-        response = error_response(
-            ErrorCode.INVALID_CREDENTIALS,
-            "Invalid login credentials",
-            401
+        access_token = generate_token(
+            user_id=student.rollno,
+            role="student",
+            is_admin=False,
         )
-        raise HTTPException(status_code=401, detail=response["error"])
 
-    log.info("login_success", email=email, f_id=faculty.f_id, role="faculty")
-    return success_response({
-        "role": "faculty",
-        "user": {
-            "id": faculty.f_id,
-            "name": faculty.name,
-            "email": faculty.email,
-            "course": faculty.course,
-            "isAdmin": bool(faculty.is_admin),
-        },
-    })
-
-
-@router.post("/auth/token")
-async def get_token_api(payload: TokenRequest):
-    """Generate JWT tokens for API authentication."""
-    email = payload.email
-    password = payload.password
-
-    log.info("token_request", email=email)
-
-    student = AuthService.authenticateStudent(email=email, password=password)
-    if student:
-        access_token = generate_token(user_id=student.rollno, role="student")
-        refresh_token = generate_refresh_token(user_id=student.rollno, role="student")
-        log.info("token_generated", email=email, rollno=student.rollno, role="student")
-        return success_response({
-            "accessToken": access_token,
-            "refreshToken": refresh_token,
-            "user": {
-                "rollno": student.rollno,
-                "name": student.name,
-                "email": student.email,
+        return success_response(
+            {
+                "accessToken": access_token,
+                "user": AuthService.serialize_student(student),
                 "role": "student",
-            },
-        })
+            }
+        )
 
-    faculty = AuthService.authenticateFaculty(email=email, password=password)
+    if role == "faculty":
+        faculty = AuthService.authenticate_faculty(email=email, password=password)
+
+        if not faculty:
+            log.warning("login_failed", email=email, role="faculty")
+            invalid_credentials()
+
+        access_token = generate_token(
+            user_id=faculty.f_id,
+            role="faculty",
+            is_admin=bool(faculty.is_admin),
+        )
+
+        return success_response(
+            {
+                "accessToken": access_token,
+                "user": AuthService.serialize_faculty(faculty),
+                "role": "faculty",
+            }
+        )
+
+    if role is not None:
+        response = error_response(
+            ErrorCode.BAD_REQUEST,
+            "Role must be 'student', 'faculty', or null",
+            400,
+        )
+        raise HTTPException(status_code=400, detail=response["error"])
+
+    # Auto-detect: ưu tiên student trước, sau đó faculty
+    student = AuthService.authenticate_student(email=email, password=password)
+
+    if student:
+        access_token = generate_token(
+            user_id=student.rollno,
+            role="student",
+            is_admin=False,
+        )
+
+        return success_response(
+            {
+                "accessToken": access_token,
+                "user": AuthService.serialize_student(student),
+                "role": "student",
+            }
+        )
+
+    faculty = AuthService.authenticate_faculty(email=email, password=password)
+
     if faculty:
         access_token = generate_token(
             user_id=faculty.f_id,
             role="faculty",
-            is_admin=bool(faculty.is_admin)
+            is_admin=bool(faculty.is_admin),
         )
-        refresh_token = generate_refresh_token(user_id=faculty.f_id, role="faculty")
-        log.info("token_generated", email=email, f_id=faculty.f_id, role="faculty")
-        return success_response({
-            "accessToken": access_token,
-            "refreshToken": refresh_token,
-            "user": {
-                "id": faculty.f_id,
-                "name": faculty.name,
-                "email": faculty.email,
-                "course": faculty.course,
-                "isAdmin": bool(faculty.is_admin),
+
+        return success_response(
+            {
+                "accessToken": access_token,
+                "user": AuthService.serialize_faculty(faculty),
                 "role": "faculty",
-            },
-        })
-
-    log.warning("token_failed", email=email, reason="invalid_credentials")
-    response = error_response(
-        ErrorCode.INVALID_CREDENTIALS,
-        "Invalid email or password",
-        401
-    )
-    raise HTTPException(status_code=401, detail=response["error"])
-
-
-@router.post("/auth/refresh")
-async def refresh_token_api(payload: RefreshTokenRequest):
-    """Refresh access token using refresh token."""
-    refresh_token = payload.refreshToken
-
-    log.info("refresh_token_request")
-
-    token_payload = verify_refresh_token(refresh_token)
-    if not token_payload:
-        log.warning("refresh_token_failed", reason="invalid_or_expired_token")
-        response = error_response(
-            ErrorCode.UNAUTHORIZED,
-            "Invalid or expired refresh token",
-            401
+            }
         )
-        raise HTTPException(status_code=401, detail=response["error"])
 
-    user_id = token_payload.get("user_id")
-    role = token_payload.get("role")
-    is_admin = token_payload.get("is_admin", False)
-
-    access_token = generate_token(user_id=user_id, role=role, is_admin=is_admin)
-    log.info("refresh_token_success", user_id=user_id, role=role)
-    return success_response({
-        "accessToken": access_token,
-    })
+    log.warning("login_failed", email=email, role="auto-detect")
+    invalid_credentials()
 
 
 @router.get("/auth/me")
-async def get_me_api():
-    """Get current authenticated user info."""
-    log.warning("get_me_called_without_auth")
-    response = error_response(
-        ErrorCode.UNAUTHORIZED,
-        "Not logged in - use JWT token in Authorization header",
-        401
-    )
-    raise HTTPException(status_code=401, detail=response["error"])
+async def get_me_api(payload: dict = Depends(get_current_token_payload)):
+    user, role = AuthService.get_user_by_token_payload(payload)
+
+    if not user:
+        unauthorized("User not found")
+
+    if role == "student":
+        return success_response(
+            {
+                "user": AuthService.serialize_student(user),
+                "role": "student",
+            }
+        )
+
+    if role == "faculty":
+        return success_response(
+            {
+                "user": AuthService.serialize_faculty(user),
+                "role": "faculty",
+            }
+        )
+
+    unauthorized("Invalid token role")
 
 
 @router.post("/auth/logout")
 async def logout_api():
-    """Logout (stateless - no-op for JWT)."""
-    log.info("logout")
-    return success_response({"message": "Logged out"})
+    # JWT stateless: backend không giữ session nên không cần clear gì ở server.
+    return success_response(
+        {
+            "message": "Logged out successfully",
+        }
+    )
