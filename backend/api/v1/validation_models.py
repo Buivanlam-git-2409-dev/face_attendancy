@@ -34,15 +34,73 @@ class ErrorDetail(BaseModel):
 
 
 # ============================================================================
-# Authentication Models
+# Attendance Models
 # ============================================================================
 
+class CreateAttendanceRequest(BaseModel):
+    """Create attendance record request for legacy Attendance table."""
+    rollno: int = Field(..., gt=0, description="Student roll number")
+    course: str = Field(..., min_length=1, max_length=100, description="Course name")
+    lecture_no: int = Field(..., ge=0, description="Lecture number")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "rollno": 12001,
+                "course": "Computer Science",
+                "lecture_no": 1
+            }
+        }
+
+    @validator("course")
+    def validate_course(cls, v):
+        if not v.strip():
+            raise ValueError("Course cannot be empty")
+        return v.strip()
+
+
+class UpdateAttendanceRequest(BaseModel):
+    """Update attendance record request for legacy Attendance table."""
+    rollno: Optional[int] = Field(None, gt=0, description="Student roll number")
+    course: Optional[str] = Field(None, min_length=1, max_length=100, description="Course name")
+    lecture_no: Optional[int] = Field(None, ge=0, description="Lecture number")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "rollno": 12001,
+                "course": "Computer Science",
+                "lecture_no": 1
+            }
+        }
+
+    @validator("course")
+    def validate_course(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError("Course cannot be empty")
+        return v.strip() if v is not None else v
+
+
+class AttendanceResponse(BaseModel):
+    """Attendance response model for legacy Attendance table."""
+    attendanceId: int
+    rollno: int
+    course: Optional[str] = None
+    lectureNo: Optional[int] = None
+    markedBy: Optional[str] = None
+    markedDate: Optional[str] = None
+    markedTime: Optional[str] = None
+
+
+class AttendanceListResponse(BaseModel):
+    """List of attendance records response."""
+    records: List[AttendanceResponse]
+    total: int
 class LoginRequest(BaseModel):
     """Student/Faculty login request."""
     email: EmailStr = Field(..., description="Email address")
     password: str = Field(..., min_length=6, description="Password (minimum 6 characters)")
     role: Optional[str] = Field(None, description="Role: 'student' or 'faculty'")
-
     class Config:
         json_schema_extra = {
             "example": {
@@ -51,6 +109,19 @@ class LoginRequest(BaseModel):
                 "role": "student"
             }
         }
+
+    @validator("role")
+    def validate_role(cls, v):
+        if v is None:
+            return v
+
+        normalized = v.lower().strip()
+
+        if normalized not in {"student", "faculty"}:
+            raise ValueError("Role must be 'student', 'faculty', or null")
+
+        return normalized
+
 
 
 class TokenRequest(BaseModel):

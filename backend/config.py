@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 ENV_PATH = BASE_DIR / ".env"
@@ -52,19 +55,19 @@ def getBooleanEnv(name: str, defaultValue=False) -> bool:
 
 
 class Config:
-    SQLALCHEMY_DATABASE_URI = resolveDatabaseUri(
-        os.getenv(
-            "DATABASE_URL",
-            f"sqlite:///{DEFAULT_DB_PATH.as_posix()}",
-        )
+    SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
+
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "DATABASE_URL",
+        f"sqlite:///{BASE_DIR / 'db' / 'database.db'}",
     )
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = os.getenv("SECRET_KEY")
-    CELERY_ENABLED = getBooleanEnv("CELERY_ENABLED", True)
+
+    CELERY_ENABLED = os.getenv("CELERY_ENABLED", "false").lower() == "true"
     CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
     CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
 
-    # YOLO Face Detector
     YOLO_FACE_MODEL_PATH = os.getenv("YOLO_FACE_MODEL_PATH", "face_model/best.pt")
-    YOLO_FACE_CONF = float(os.getenv("YOLO_FACE_CONF", "0.50"))
+    YOLO_FACE_CONF = float(os.getenv("YOLO_FACE_CONF", "0.5"))
 

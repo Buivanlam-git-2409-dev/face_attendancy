@@ -1,18 +1,23 @@
 """
 Error handling and middleware for FastAPI application.
-Provides consistent error responses and logging.
+
+Provides consistent success/error responses and global exception handlers.
 """
-from fastapi import Request, status
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
+
+from typing import Any, Dict, Optional
+
 import structlog
+from fastapi import Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 
 log = structlog.get_logger(__name__)
 
 
 class ErrorCode:
-    """Standard error codes."""
+    """Standard API error codes."""
+
     VALIDATION_ERROR = "VALIDATION_ERROR"
     INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
     UNAUTHORIZED = "UNAUTHORIZED"
@@ -21,19 +26,27 @@ class ErrorCode:
     CONFLICT = "CONFLICT"
     INTERNAL_ERROR = "INTERNAL_ERROR"
     INVALID_PAYLOAD = "INVALID_PAYLOAD"
+    BAD_REQUEST = "BAD_REQUEST"
 
 
 def error_response(
     code: str,
     message: str,
     status_code: int = 400,
-    details: dict = None
-):
-    """Create a standardized error response."""
+    details: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Create a standardized error response.
+
+    Note:
+    The status_code parameter is kept for backward compatibility with existing
+    route code. HTTP status is still controlled by HTTPException/JSONResponse.
+    """
     error = {
         "code": code,
         "message": message,
     }
+
     if details:
         error["details"] = details
 
@@ -44,8 +57,17 @@ def error_response(
     }
 
 
-def success_response(data=None, status_code: int = 200):
-    """Create a standardized success response."""
+def success_response(
+    data: Any = None,
+    status_code: int = 200,
+) -> Dict[str, Any]:
+    """
+    Create a standardized success response.
+
+    Note:
+    The status_code parameter is kept for backward compatibility.
+    HTTP status is controlled by the route decorator or JSONResponse.
+    """
     return {
         "success": True,
         "data": data,
@@ -53,56 +75,63 @@ def success_response(data=None, status_code: int = 200):
     }
 
 
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError,
+):
     """Handle Pydantic validation errors."""
-    errors = exc.errors()
     formatted_errors = []
 
-    for error in errors:
-        field = ".".join(str(x) for x in error.get("loc", [])[1:])
-        msg = error.get("msg", "Invalid value")
-        formatted_errors.append({
-            "field": field,
-            "message": msg,
-            "type": error.get("type", "unknown")
-        })
+    for error in exc.errors():
+        field = ".".join(str(item) for item in error.get("loc", [])[1:])
+        message = error.get("msg", "Invalid value")
+
+        formatted_errors.append(
+            {
+                "field": field,
+                "message": message,
+                "type": error.get("type", "unknown"),
+            }
+        )
 
     log.warning(
         "validation_error",
         path=request.url.path,
-        errors=formatted_errors
+        errors=formatted_errors,
     )
 
     response = error_response(
         ErrorCode.VALIDATION_ERROR,
         "Request validation failed",
         status_code=422,
-        details={"errors": formatted_errors}
+        details={"errors": formatted_errors},
     )
 
     return JSONResponse(
         status_code=422,
-        content=response
+        content=response,
     )
 
 
-async def general_exception_handler(request: Request, exc: Exception):
-    """Handle general exceptions."""
+async def general_exception_handler(
+    request: Request,
+    exc: Exception,
+):
+    """Handle unhandled exceptions."""
     log.error(
         "unhandled_exception",
         path=request.url.path,
         error=str(exc),
-        exc_info=exc
+        exc_info=exc,
     )
 
     response = error_response(
         ErrorCode.INTERNAL_ERROR,
         "Internal server error",
-        status_code=500
+        status_code=500,
     )
 
     return JSONResponse(
         status_code=500,
-        content=response
+        content=response,
     )
-

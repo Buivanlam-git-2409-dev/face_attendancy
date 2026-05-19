@@ -2,6 +2,8 @@ import axios from 'axios'
 
 const API_BASE_URL = '/api/v1'
 
+const TOKEN_KEY = 'token'
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -9,31 +11,39 @@ const apiClient = axios.create({
   },
 })
 
-// Request interceptor to attach JWT token
+// Gắn JWT token vào mọi request nếu đã đăng nhập
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(TOKEN_KEY)
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
     return config
   },
-  (error) => {
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
+// Xử lý khi token hết hạn hoặc không hợp lệ
 apiClient.interceptors.response.use(
-  response => response,
-  error => {
-    const isAuthMeRequest = error.config?.url?.endsWith('/auth/me')
-    const isLoginPage = window.location.pathname === '/login'
+  (response) => response,
+  (error) => {
+    const status = error.response?.status
+    const requestUrl = error.config?.url || ''
+    const currentPath = window.location.pathname
 
-    if (error.response?.status === 401 && !isAuthMeRequest && !isLoginPage) {
-      // Session expired or invalid token - redirect to login
-      localStorage.removeItem('token')
+    const isAuthMeRequest = requestUrl.endsWith('/auth/me')
+    const isLoginPage = currentPath === '/login'
+
+    if (status === 401 && !isAuthMeRequest && !isLoginPage) {
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem('user')
+      localStorage.removeItem('role')
+
       window.location.href = '/login'
     }
+
     return Promise.reject(error)
   }
 )

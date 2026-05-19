@@ -1,4 +1,4 @@
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from sqlalchemy.sql import func
 from backend.extensions import db
 
@@ -9,6 +9,8 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.String(255))
+
+    users = db.relationship("User", back_populates="role", lazy=True)
 
     def __repr__(self):
         return f"<Role {self.name}>"
@@ -25,12 +27,25 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, server_default=func.now())
     updated_at = db.Column(db.DateTime, onupdate=func.now())
 
-    role = db.relationship("Role", backref=db.backref("users", lazy=True))
+    role = db.relationship("Role", back_populates="users")
+
+    student_profile = db.relationship(
+        "Student",
+        back_populates="user",
+        uselist=False,
+    )
+    faculty_profile = db.relationship(
+        "Faculty",
+        back_populates="user",
+        uselist=False,
+    )
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)
 
     def check_password(self, password):
+        if not self.hashed_password:
+            return False
         return check_password_hash(self.hashed_password, password)
 
     def __repr__(self):
@@ -50,12 +65,19 @@ class Student(db.Model):
     pic_path = db.Column(db.Text)
     registered_on = db.Column(db.DateTime)
 
-    user = db.relationship("User", backref=db.backref("student_profile", uselist=False))
+    user = db.relationship("User", back_populates="student_profile")
+
+    enrollments = db.relationship("Enrollment", back_populates="student")
+    attendance_records = db.relationship("AttendanceRecord", back_populates="student")
+    embeddings = db.relationship("FaceEmbedding", back_populates="student")
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)
 
     def check_password(self, password):
+        if not self.hashed_password:
+            return False
+
         return check_password_hash(self.hashed_password, password)
 
 class Faculty(db.Model):
@@ -71,105 +93,162 @@ class Faculty(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     registered_on = db.Column(db.DateTime)
 
-    user = db.relationship("User", backref=db.backref("faculty_profile", uselist=False))
+    user = db.relationship("User", back_populates="faculty_profile")
+
+    sessions = db.relationship("AttendanceSession", back_populates="faculty")
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)
 
     def check_password(self, password):
+        if not self.hashed_password:
+            return False
+
         return check_password_hash(self.hashed_password, password)
 
 class Department(db.Model):
     __tablename__ = "Department"
     __table_args__ = {"extend_existing": True}
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     code = db.Column(db.String(20), unique=True)
 
+    courses = db.relationship("Course", back_populates="department")
+
+
 class Semester(db.Model):
     __tablename__ = "Semester"
     __table_args__ = {"extend_existing": True}
+
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False) # e.g., Fall 2024
+    name = db.Column(db.String(50), nullable=False)
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
     is_active = db.Column(db.Boolean, default=True)
 
+    enrollments = db.relationship("Enrollment", back_populates="semester")
+    sessions = db.relationship("AttendanceSession", back_populates="semester")
+
 class Course(db.Model):
     __tablename__ = "Course"
     __table_args__ = {"extend_existing": True}
+
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(20), unique=True, nullable=False) # e.g., CS101
+    code = db.Column(db.String(20), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey("Department.id"))
     credits = db.Column(db.Integer, default=3)
 
-    department = db.relationship("Department", backref="courses")
+    department = db.relationship("Department", back_populates="courses")
+    enrollments = db.relationship("Enrollment", back_populates="course")
+    sessions = db.relationship("AttendanceSession", back_populates="course")
+
 
 class ClassRoom(db.Model):
     __tablename__ = "ClassRoom"
     __table_args__ = {"extend_existing": True}
+
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False) # e.g., A-101
+    name = db.Column(db.String(50), unique=True, nullable=False)
     capacity = db.Column(db.Integer)
+
+    sessions = db.relationship("AttendanceSession", back_populates="classroom")
 
 class Enrollment(db.Model):
     __tablename__ = "Enrollment"
-    __table_args__ = {"extend_existing": True}
+    __table_args__ = (
+        db.UniqueConstraint(
+            "student_id",
+            "course_id",
+            "semester_id",
+            name="uq_enrollment_student_course_semester",
+        ),
+        {"extend_existing": True},
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("Student.id"), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey("Course.id"), nullable=False)
     semester_id = db.Column(db.Integer, db.ForeignKey("Semester.id"), nullable=False)
     enrolled_at = db.Column(db.DateTime, server_default=func.now())
 
-    student = db.relationship("Student", backref="enrollments")
-    course = db.relationship("Course", backref="enrollments")
-    semester = db.relationship("Semester", backref="enrollments")
+    student = db.relationship("Student", back_populates="enrollments")
+    course = db.relationship("Course", back_populates="enrollments")
+    semester = db.relationship("Semester", back_populates="enrollments")
+
 
 class AttendanceSession(db.Model):
     __tablename__ = "AttendanceSession"
     __table_args__ = {"extend_existing": True}
+
     id = db.Column(db.Integer, primary_key=True)
     course_id = db.Column(db.Integer, db.ForeignKey("Course.id"), nullable=False)
     faculty_id = db.Column(db.Integer, db.ForeignKey("Faculty.f_id"), nullable=False)
     classroom_id = db.Column(db.Integer, db.ForeignKey("ClassRoom.id"))
     semester_id = db.Column(db.Integer, db.ForeignKey("Semester.id"))
-    
+
     lecture_no = db.Column(db.Integer)
     session_date = db.Column(db.Date, nullable=False)
     start_time = db.Column(db.Time)
     end_time = db.Column(db.Time)
-    status = db.Column(db.String(20), default='scheduled') # scheduled, active, completed, cancelled
+    status = db.Column(db.String(20), default="scheduled")
 
-    course = db.relationship("Course", backref="sessions")
-    faculty = db.relationship("Faculty", backref="sessions")
-    classroom = db.relationship("ClassRoom", backref="sessions")
+    course = db.relationship("Course", back_populates="sessions")
+    faculty = db.relationship("Faculty", back_populates="sessions")
+    classroom = db.relationship("ClassRoom", back_populates="sessions")
+    semester = db.relationship("Semester", back_populates="sessions")
+    records = db.relationship("AttendanceRecord", back_populates="session")
+
 
 class AttendanceRecord(db.Model):
     __tablename__ = "AttendanceRecord"
-    __table_args__ = {"extend_existing": True}
-    id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.Integer, db.ForeignKey("AttendanceSession.id"), nullable=False)
-    student_id = db.Column(db.Integer, db.ForeignKey("Student.id"), nullable=False)
-    
-    status = db.Column(db.String(20), default='PRESENT') # PRESENT, ABSENT, LATE, EXCUSED
-    marked_at = db.Column(db.DateTime, server_default=func.now())
-    marking_method = db.Column(db.String(20), default='FACE') # FACE, MANUAL
+    __table_args__ = (
+        db.UniqueConstraint(
+            "session_id",
+            "student_id",
+            name="uq_attendance_record_session_student",
+        ),
+        {"extend_existing": True},
+    )
 
-    session = db.relationship("AttendanceSession", backref="records")
-    student = db.relationship("Student", backref="attendance_records")
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(
+        db.Integer,
+        db.ForeignKey("AttendanceSession.id"),
+        nullable=False,
+    )
+    student_id = db.Column(db.Integer, db.ForeignKey("Student.id"), nullable=False)
+
+    status = db.Column(db.String(20), default="PRESENT")
+    marked_at = db.Column(db.DateTime, server_default=func.now())
+    marking_method = db.Column(db.String(20), default="FACE")
+
+    session = db.relationship("AttendanceSession", back_populates="records")
+    student = db.relationship("Student", back_populates="attendance_records")
+
 
 class FaceEmbedding(db.Model):
     __tablename__ = "FaceEmbedding"
     __table_args__ = {"extend_existing": True}
+
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("Student.id"), nullable=False)
-    embedding = db.Column(db.JSON, nullable=False) # Store as JSON array of floats
+    embedding = db.Column(db.JSON, nullable=False)
+    source_image_path = db.Column(db.Text)
+    quality_score = db.Column(db.Float)
+    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, server_default=func.now())
 
-    student = db.relationship("Student", backref="embeddings")
+    student = db.relationship("Student", back_populates="embeddings")
+
 
 class Attendance(db.Model):
+    """
+    Legacy attendance table.
+    New code should prefer:
+    AttendanceSession + AttendanceRecord
+    """
     __tablename__ = "Attendance"
     __table_args__ = {"extend_existing": True}
 
@@ -191,7 +270,7 @@ class RecognitionJob(db.Model):
     lecture_no = db.Column(db.Integer, nullable=False)
     marked_by = db.Column(db.String(80), nullable=False)
     duration_seconds = db.Column(db.Integer, nullable=False, default=30)
-    status = db.Column(db.String(20), nullable=False, default='queued')
+    status = db.Column(db.String(20), nullable=False, default="queued")
     marked_count = db.Column(db.Integer, nullable=False, default=0)
     error_message = db.Column(db.Text)
     started_at = db.Column(db.DateTime, server_default=func.now())

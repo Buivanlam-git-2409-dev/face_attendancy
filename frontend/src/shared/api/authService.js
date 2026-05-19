@@ -2,11 +2,16 @@ import apiClient from './apiClient'
 
 export const authService = {
   async login(email, password, role = null) {
-    const response = await apiClient.post('/auth/login', {
+    const payload = {
       email,
       password,
-      role,
-    })
+    }
+
+    if (role) {
+      payload.role = role
+    }
+
+    const response = await apiClient.post('/auth/login', payload)
     return response.data
   },
 

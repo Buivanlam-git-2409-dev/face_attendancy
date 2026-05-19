@@ -1,46 +1,67 @@
 # backend/services/auth_service.py
 
 from datetime import datetime
-
+from typing import Optional, Tuple
 from backend.extensions import db
-from backend.models import Faculty, Student, User, Role
-from backend.security import hash_password, verify_password
+from backend.models import Faculty, Role, Student, User
 
 
 class AuthService:
     @staticmethod
-    def get_role(role_name: str) -> Role:
+    def get_role(role_name: str) -> Optional[Role]:
+        if not role_name:
+            return None
+
         return Role.query.filter_by(name=role_name.upper()).first()
 
     @staticmethod
-    def authenticate(email: str, password: str):
-        """Universal authentication using the User model"""
+    def authenticate(email: str, password: str) -> Optional[User]:
+        """
+        Universal authentication using the User model.
+        """
+        if not email or not password:
+            return None
+
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             return user
         return None
 
     @staticmethod
-    def authenticate_student(email: str, password: str):
-        # Keep for backward compatibility
-        user = AuthService.authenticate(email, password)
-        if user and user.role and user.role.name == 'STUDENT':
-            return user.student_profile
+    def authenticate_student(email: str, password: str) -> Optional[Student]:
+        """
+        Authenticate student.
 
-        # Fallback to old table if user not linked yet
+        Priority:
+        1. New User model + linked student_profile
+        2. Legacy Student table fallback
+        """
+        user = AuthService.authenticate(email, password)
+
+        if user and user.role and user.role.name == "STUDENT":
+            if user.student_profile:
+                return user.student_profile
+
         student = Student.query.filter_by(email=email).first()
         if student and student.check_password(password):
             return student
         return None
 
     @staticmethod
-    def authenticate_faculty(email: str, password: str):
-        # Keep for backward compatibility
-        user = AuthService.authenticate(email, password)
-        if user and user.role and user.role.name in ['FACULTY', 'ADMIN']:
-            return user.faculty_profile
+    def authenticate_faculty(email: str, password: str) -> Optional[Faculty]:
+        """
+        Authenticate faculty/admin.
 
-        # Fallback to old table if user not linked yet
+        Priority:
+        1. New User model + linked faculty_profile
+        2. Legacy Faculty table fallback
+        """
+        user = AuthService.authenticate(email, password)
+
+        if user and user.role and user.role.name in {"FACULTY", "ADMIN"}:
+            if user.faculty_profile:
+                return user.faculty_profile
+
         faculty = Faculty.query.filter_by(email=email).first()
         if faculty and faculty.check_password(password):
             return faculty
@@ -55,19 +76,19 @@ class AuthService:
             return None, None
 
         if role == "student":
-            user = Student.query.filter_by(rollno=user_id).first()
-            return user, "student"
+            student = Student.query.filter_by(rollno=user_id).first()
+            return student, "student"
 
         if role == "faculty":
-            user = Faculty.query.filter_by(f_id=user_id).first()
-            return user, "faculty"
+            faculty = Faculty.query.filter_by(f_id=user_id).first()
+            return faculty, "faculty"
 
         return None, None
 
     @staticmethod
     def serialize_student(student: Student) -> dict:
         return {
-            "id": student.id,
+            "id": getattr(student, "id", student.rollno),
             "rollno": student.rollno,
             "name": student.name,
             "email": student.email,
@@ -78,7 +99,7 @@ class AuthService:
     @staticmethod
     def serialize_faculty(faculty: Faculty) -> dict:
         return {
-            "id": faculty.f_id,
+            "id": getattr(faculty, "f_id", getattr(faculty, "id", None)),
             "name": faculty.name,
             "email": faculty.email,
             "course": faculty.course,
@@ -87,30 +108,37 @@ class AuthService:
         }
 
     @staticmethod
-    def registerFaculty(name: str, course: str, email: str, password: str, isAdmin: bool):
-        existingUser = User.query.filter_by(email=email).first()
-        if existingUser:
+    def register_faculty(
+        name: str,
+        course: str,
+        email: str,
+        password: str,
+        is_admin: bool = False,
+    ) -> Tuple[Optional[Faculty], Optional[str]]:
+        existing_user = User.query.filter_by(email=email).first()
+
+        if existing_user:
             return None, "User with this email already exists!"
 
-        # 1. Create User
-        role_name = 'ADMIN' if isAdmin else 'FACULTY'
+        role_name = "ADMIN" if is_admin else "FACULTY"
         role = AuthService.get_role(role_name)
 
+        if not role:
+            return None, f"Role {role_name} does not exist!"
         user = User(
             email=email,
-            role=role
+            role=role,
         )
         user.set_password(password)
         db.session.add(user)
-        db.session.flush() # Get user.id
+        db.session.flush()
 
-        # 2. Create Faculty Profile
         faculty = Faculty(
             user_id=user.id,
             name=name,
             course=course,
             email=email,
-            is_admin=isAdmin,
+            is_admin=is_admin,
             registered_on=datetime.now(),
         )
         faculty.set_password(password)
@@ -121,37 +149,39 @@ class AuthService:
         return faculty, None
 
     @staticmethod
-    def registerStudent(
+    def register_student(
         rollno: int,
         name: str,
         semester: str,
         email: str,
         password: str,
-        picPath: str,
-    ):
-        existingUser = User.query.filter_by(email=email).first()
-        if existingUser:
+        pic_path: str,
+    ) -> Tuple[Optional[Student], Optional[str]]:
+        existing_user = User.query.filter_by(email=email).first()
+
+        if existing_user:
             return None, "User with this email already exists!"
 
-        # 1. Create User
-        role = AuthService.get_role('STUDENT')
-        
+        role = AuthService.get_role("STUDENT")
+
+        if not role:
+            return None, "Role STUDENT does not exist!"
+
         user = User(
             email=email,
-            role=role
+            role=role,
         )
         user.set_password(password)
         db.session.add(user)
         db.session.flush()
 
-        # 2. Create Student Profile
         student = Student(
             user_id=user.id,
             rollno=rollno,
             name=name,
             semester=semester,
             email=email,
-            pic_path=picPath,
+            pic_path=pic_path,
             registered_on=datetime.now(),
         )
         student.set_password(password)
@@ -160,3 +190,6 @@ class AuthService:
         db.session.commit()
 
         return student, None
+    # Backward compatibility aliases for old code
+    registerFaculty = register_faculty
+    registerStudent = register_student

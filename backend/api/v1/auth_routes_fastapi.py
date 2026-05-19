@@ -1,27 +1,15 @@
-# backend/api/v1/auth_routes_fastapi.py
-
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import structlog
 
+from backend.api.error_handler import ErrorCode, error_response, success_response
+from backend.api.v1.dependencies import get_current_user
 from backend.api.v1.validation_models import LoginRequest
-from backend.api.error_handler import error_response, success_response, ErrorCode
-from backend.security import generate_token, verify_token
+from backend.security import generate_token
 from backend.services.auth_service import AuthService
 
 
 router = APIRouter()
 log = structlog.get_logger(__name__)
-
-bearer_scheme = HTTPBearer(auto_error=False)
-
-
-def unauthorized(message: str = "Unauthorized"):
-    response = error_response(ErrorCode.UNAUTHORIZED, message, 401)
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=response["error"],
-    )
 
 
 def invalid_credentials():
@@ -30,27 +18,58 @@ def invalid_credentials():
         "Invalid email or password",
         401,
     )
+
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=response["error"],
     )
 
 
-async def get_current_token_payload(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-) -> dict:
-    if credentials is None:
-        unauthorized("Missing Authorization Bearer token")
+def bad_request(message: str):
+    response = error_response(
+        ErrorCode.BAD_REQUEST,
+        message,
+        400,
+    )
 
-    if credentials.scheme.lower() != "bearer":
-        unauthorized("Invalid authorization scheme")
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=response["error"],
+    )
 
-    payload = verify_token(credentials.credentials)
 
-    if not payload:
-        unauthorized("Invalid or expired token")
+def build_login_response(user, role: str):
+    if role == "student":
+        access_token = generate_token(
+            user_id=user.rollno,
+            role="student",
+            is_admin=False,
+        )
 
-    return payload
+        return success_response(
+            {
+                "accessToken": access_token,
+                "user": AuthService.serialize_student(user),
+                "role": "student",
+            }
+        )
+
+    if role == "faculty":
+        access_token = generate_token(
+            user_id=user.f_id,
+            role="faculty",
+            is_admin=bool(user.is_admin),
+        )
+
+        return success_response(
+            {
+                "accessToken": access_token,
+                "user": AuthService.serialize_faculty(user),
+                "role": "faculty",
+            }
+        )
+
+    bad_request("Invalid role")
 
 
 @router.post("/auth/login")
@@ -68,19 +87,7 @@ async def login_api(payload: LoginRequest):
             log.warning("login_failed", email=email, role="student")
             invalid_credentials()
 
-        access_token = generate_token(
-            user_id=student.rollno,
-            role="student",
-            is_admin=False,
-        )
-
-        return success_response(
-            {
-                "accessToken": access_token,
-                "user": AuthService.serialize_student(student),
-                "role": "student",
-            }
-        )
+        return build_login_response(student, "student")
 
     if role == "faculty":
         faculty = AuthService.authenticate_faculty(email=email, password=password)
@@ -89,68 +96,24 @@ async def login_api(payload: LoginRequest):
             log.warning("login_failed", email=email, role="faculty")
             invalid_credentials()
 
-        access_token = generate_token(
-            user_id=faculty.f_id,
-            role="faculty",
-            is_admin=bool(faculty.is_admin),
-        )
-
-        return success_response(
-            {
-                "accessToken": access_token,
-                "user": AuthService.serialize_faculty(faculty),
-                "role": "faculty",
-            }
-        )
+        return build_login_response(faculty, "faculty")
 
     if role is not None:
-        response = error_response(
-            ErrorCode.BAD_REQUEST,
-            "Role must be 'student', 'faculty', or null",
-            400,
-        )
-        raise HTTPException(status_code=400, detail=response["error"])
+        bad_request("Role must be 'student', 'faculty', or null")
 
     # Auto-detect: ưu tiên student trước, sau đó faculty
     student = AuthService.authenticate_student(email=email, password=password)
 
     if student:
-        access_token = generate_token(
-            user_id=student.rollno,
-            role="student",
-            is_admin=False,
-        )
-
-        return success_response(
-            {
-                "accessToken": access_token,
-                "user": AuthService.serialize_student(student),
-                "role": "student",
-            }
-        )
+        return build_login_response(student, "student")
 
     faculty = AuthService.authenticate_faculty(email=email, password=password)
 
     if faculty:
-        access_token = generate_token(
-            user_id=faculty.f_id,
-            role="faculty",
-            is_admin=bool(faculty.is_admin),
-        )
-
-        return success_response(
-            {
-                "accessToken": access_token,
-                "user": AuthService.serialize_faculty(faculty),
-                "role": "faculty",
-            }
-        )
+        return build_login_response(faculty, "faculty")
 
     log.warning("login_failed", email=email, role="auto-detect")
     invalid_credentials()
-
-
-from backend.api.v1.dependencies import get_current_user
 
 
 @router.get("/auth/me")
@@ -173,7 +136,7 @@ async def get_me_api(current_user_data: tuple = Depends(get_current_user)):
             }
         )
 
-    unauthorized("Invalid token role")
+    bad_request("Invalid token role")
 
 
 @router.post("/auth/logout")

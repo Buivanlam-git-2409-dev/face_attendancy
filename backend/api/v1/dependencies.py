@@ -1,15 +1,16 @@
+from typing import Tuple
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-import structlog
 
+from backend.api.error_handler import ErrorCode, error_response
 from backend.security import verify_token
 from backend.services.auth_service import AuthService
-from backend.api.error_handler import error_response, ErrorCode
 
-log = structlog.get_logger(__name__)
+
 bearer_scheme = HTTPBearer(auto_error=False)
 
-def unauthorized(message: str = "Unauthorized"):
+
+def unauthorized(message: str = "Unauthorized") -> None:
     response = error_response(ErrorCode.UNAUTHORIZED, message, 401)
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -32,15 +33,17 @@ async def get_current_user_payload(
     return payload
 
 async def get_current_user(
-    payload: dict = Depends(get_current_user_payload)
-):
+    payload: dict = Depends(get_current_user_payload),
+) -> Tuple[object, str]:
     user, role = AuthService.get_user_by_token_payload(payload)
     if not user:
         unauthorized("User not found")
+    if role not in {"student", "faculty"}:
+        unauthorized("Invalid user role")
     return user, role
 
 async def require_student(
-    user_data: tuple = Depends(get_current_user)
+    user_data: Tuple[object, str] = Depends(get_current_user),
 ):
     user, role = user_data
     if role != "student":
@@ -48,7 +51,7 @@ async def require_student(
     return user
 
 async def require_faculty(
-    user_data: tuple = Depends(get_current_user)
+    user_data: Tuple[object, str] = Depends(get_current_user),
 ):
     user, role = user_data
     if role != "faculty":
@@ -56,7 +59,7 @@ async def require_faculty(
     return user
 
 async def require_admin(
-    user_data: tuple = Depends(get_current_user)
+    user_data: Tuple[object, str] = Depends(get_current_user),
 ):
     user, role = user_data
     if role != "faculty" or not getattr(user, "is_admin", False):
