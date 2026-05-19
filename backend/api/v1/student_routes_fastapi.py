@@ -72,9 +72,9 @@ async def register_student_api(payload: RegisterStudentRequest):
 
 
 @router.get("/students")
-async def list_students_api(current_faculty: tuple = Depends(require_faculty)):
+async def list_students_api(current_faculty: Faculty = Depends(require_faculty)):
     """List all students (faculty only)."""
-    log.info("list_students_request")
+    log.info("list_students_request", faculty=current_faculty.name)
     try:
         students = StudentService.listStudents()
         return success_response(students)
@@ -95,7 +95,8 @@ async def get_student_api(rollno: int, current_user_data: tuple = Depends(get_cu
     
     current_user, role = current_user_data
     if role == "student" and current_user.rollno != rollno:
-        response = error_response(ErrorCode.UNAUTHORIZED, "Cannot access other student data", 403)
+        log.warning("get_student_forbidden", rollno=rollno, student_rollno=current_user.rollno)
+        response = error_response(ErrorCode.FORBIDDEN, "Cannot access other student data", 403)
         raise HTTPException(status_code=403, detail=response["error"])
 
     try:
@@ -130,7 +131,8 @@ async def get_student_attendance_api(rollno: int, current_user_data: tuple = Dep
     
     current_user, role = current_user_data
     if role == "student" and current_user.rollno != rollno:
-        response = error_response(ErrorCode.UNAUTHORIZED, "Cannot access other student data", 403)
+        log.warning("get_student_attendance_forbidden", rollno=rollno, student_rollno=current_user.rollno)
+        response = error_response(ErrorCode.FORBIDDEN, "Cannot access other student data", 403)
         raise HTTPException(status_code=403, detail=response["error"])
 
     try:
@@ -145,7 +147,7 @@ async def get_student_attendance_api(rollno: int, current_user_data: tuple = Dep
             raise HTTPException(status_code=404, detail=response["error"])
 
         data = AttendanceService.listAttendances(rollNo=rollno)
-        log.info("get_student_attendance_success", rollno=rollno)
+        log.info("get_student_attendance_success", rollno=rollno, count=len(data))
         return success_response(data)
     except HTTPException:
         raise

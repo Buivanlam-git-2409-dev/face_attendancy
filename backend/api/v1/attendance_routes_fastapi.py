@@ -13,7 +13,7 @@ from backend.api.v1.validation_models import (
 )
 from backend.api.error_handler import error_response, success_response, ErrorCode
 from backend.services.attendance_service import AttendanceService
-from backend.api.v1.dependencies import require_faculty
+from backend.api.v1.dependencies import require_faculty, get_current_user
 from backend.models import Faculty
 
 router = APIRouter()
@@ -57,6 +57,48 @@ async def list_attendances_api(
         response = error_response(
             ErrorCode.INTERNAL_ERROR,
             "Failed to retrieve attendance records",
+            500
+        )
+        raise HTTPException(status_code=500, detail=response["error"])
+
+
+@router.get("/attendances/{att_id}")
+async def get_attendance_api(
+    att_id: int,
+    current_user_data: tuple = Depends(get_current_user),
+):
+    """Get specific attendance record (faculty or own student)."""
+    log.info("get_attendance_request", att_id=att_id)
+    try:
+        data = AttendanceService.getAttendance(attId=att_id)
+        if not data:
+            log.warning("get_attendance_not_found", att_id=att_id)
+            response = error_response(
+                ErrorCode.NOT_FOUND,
+                "Attendance record not found",
+                404
+            )
+            raise HTTPException(status_code=404, detail=response["error"])
+            
+        current_user, role = current_user_data
+        # Faculty can see everything. Student can only see their own.
+        if role == "student" and data["rollno"] != current_user.rollno:
+            log.warning("get_attendance_forbidden", att_id=att_id, rollno=current_user.rollno)
+            response = error_response(
+                ErrorCode.FORBIDDEN,
+                "Access denied to this record",
+                403
+            )
+            raise HTTPException(status_code=403, detail=response["error"])
+            
+        return success_response(data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("get_attendance_error", att_id=att_id, error=str(e), exc_info=e)
+        response = error_response(
+            ErrorCode.INTERNAL_ERROR,
+            "Failed to retrieve attendance record",
             500
         )
         raise HTTPException(status_code=500, detail=response["error"])
