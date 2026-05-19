@@ -2,7 +2,7 @@
 FastAPI Attendance Routes
 Migration of Flask attendance_routes.py to FastAPI with validation and logging.
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
 import structlog
 
@@ -13,6 +13,8 @@ from backend.api.v1.validation_models import (
 )
 from backend.api.error_handler import error_response, success_response, ErrorCode
 from backend.services.attendance_service import AttendanceService
+from backend.api.v1.dependencies import require_faculty
+from backend.models import Faculty
 
 router = APIRouter()
 log = structlog.get_logger(__name__)
@@ -34,10 +36,10 @@ async def list_attendances_api(
     lecture_no: Optional[str] = Query(None),
     course: Optional[str] = Query(None),
     marked_by: Optional[str] = Query(None),
+    current_faculty: Faculty = Depends(require_faculty),
 ):
     """List attendance records with optional filters (faculty-only)."""
-    log.info("list_attendances_request", rollno=rollno, course=course, lecture_no=lecture_no)
-    # TODO: Add JWT faculty verification
+    log.info("list_attendances_request", rollno=rollno, course=course, lecture_no=lecture_no, faculty=current_faculty.name)
     try:
         rollno_int = parse_int(rollno)
         lecture_no_int = parse_int(lecture_no)
@@ -61,16 +63,18 @@ async def list_attendances_api(
 
 
 @router.post("/attendances", status_code=201)
-async def mark_attendance_api(payload: CreateAttendanceRequest):
+async def mark_attendance_api(
+    payload: CreateAttendanceRequest,
+    current_faculty: Faculty = Depends(require_faculty),
+):
     """Mark attendance for a student (faculty-only)."""
-    log.info("mark_attendance_request", rollno=payload.rollno, course=payload.course)
-    # TODO: Add JWT faculty verification and extract marked_by from token
+    log.info("mark_attendance_request", rollno=payload.rollno, course=payload.course, faculty=current_faculty.name)
     try:
         rollNo = payload.rollno
         lectureNo = payload.lecture_no or 0
         course = payload.course
 
-        marked_by = "System"  # TODO: Extract from JWT token
+        marked_by = current_faculty.name
         data, error = AttendanceService.markAttendance(
             rollNo=rollNo,
             course=course,
@@ -101,10 +105,13 @@ async def mark_attendance_api(payload: CreateAttendanceRequest):
 
 
 @router.put("/attendances/{att_id}")
-async def update_attendance_api(att_id: int, payload: UpdateAttendanceRequest):
+async def update_attendance_api(
+    att_id: int, 
+    payload: UpdateAttendanceRequest,
+    current_faculty: Faculty = Depends(require_faculty),
+):
     """Update attendance record (faculty-only)."""
-    log.info("update_attendance_request", att_id=att_id)
-    # TODO: Add JWT faculty verification
+    log.info("update_attendance_request", att_id=att_id, faculty=current_faculty.name)
     try:
         rollNo = payload.rollno
         lectureNo = payload.lecture_no
@@ -140,10 +147,12 @@ async def update_attendance_api(att_id: int, payload: UpdateAttendanceRequest):
 
 
 @router.delete("/attendances/{att_id}")
-async def delete_attendance_api(att_id: int):
+async def delete_attendance_api(
+    att_id: int,
+    current_faculty: Faculty = Depends(require_faculty),
+):
     """Delete attendance record (faculty-only)."""
-    log.info("delete_attendance_request", att_id=att_id)
-    # TODO: Add JWT faculty verification
+    log.info("delete_attendance_request", att_id=att_id, faculty=current_faculty.name)
     try:
         success_flag, error = AttendanceService.deleteAttendance(att_id)
         if error is not None:
@@ -167,3 +176,4 @@ async def delete_attendance_api(att_id: int):
             500
         )
         raise HTTPException(status_code=500, detail=response["error"])
+

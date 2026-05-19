@@ -2,7 +2,7 @@
 FastAPI Student Routes
 Migration of Flask student_routes.py to FastAPI with validation and logging.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 import structlog
 
 from backend.api.v1.validation_models import (
@@ -13,6 +13,8 @@ from backend.api.error_handler import error_response, success_response, ErrorCod
 from backend.services.attendance_service import AttendanceService
 from backend.services.auth_service import AuthService
 from backend.services.student_service import StudentService
+from backend.api.v1.dependencies import require_faculty, require_student, get_current_user
+from backend.models import Student
 
 router = APIRouter()
 log = structlog.get_logger(__name__)
@@ -59,6 +61,8 @@ async def register_student_api(payload: RegisterStudentRequest):
         })
     except Exception as e:
         log.error("student_registration_error", rollno=rollno, error=str(e), exc_info=e)
+        if isinstance(e, HTTPException):
+            raise
         response = error_response(
             ErrorCode.INTERNAL_ERROR,
             "Registration failed",
@@ -68,10 +72,9 @@ async def register_student_api(payload: RegisterStudentRequest):
 
 
 @router.get("/students")
-async def list_students_api():
+async def list_students_api(current_faculty: tuple = Depends(require_faculty)):
     """List all students (faculty only)."""
     log.info("list_students_request")
-    # TODO: Add JWT faculty verification
     try:
         students = StudentService.listStudents()
         return success_response(students)
@@ -86,10 +89,15 @@ async def list_students_api():
 
 
 @router.get("/students/{rollno}")
-async def get_student_api(rollno: int):
-    """Get student by roll number (faculty only)."""
+async def get_student_api(rollno: int, current_user_data: tuple = Depends(get_current_user)):
+    """Get student by roll number (faculty or own student)."""
     log.info("get_student_request", rollno=rollno)
-    # TODO: Add JWT faculty verification
+    
+    current_user, role = current_user_data
+    if role == "student" and current_user.rollno != rollno:
+        response = error_response(ErrorCode.UNAUTHORIZED, "Cannot access other student data", 403)
+        raise HTTPException(status_code=403, detail=response["error"])
+
     try:
         student = StudentService.getStudentByRollNo(rollno)
         if student is None:
@@ -116,10 +124,15 @@ async def get_student_api(rollno: int):
 
 
 @router.get("/students/{rollno}/attendances")
-async def get_student_attendance_api(rollno: int):
-    """Get student's attendance records (faculty only)."""
+async def get_student_attendance_api(rollno: int, current_user_data: tuple = Depends(get_current_user)):
+    """Get student's attendance records (faculty or own student)."""
     log.info("get_student_attendance_request", rollno=rollno)
-    # TODO: Add JWT faculty verification
+    
+    current_user, role = current_user_data
+    if role == "student" and current_user.rollno != rollno:
+        response = error_response(ErrorCode.UNAUTHORIZED, "Cannot access other student data", 403)
+        raise HTTPException(status_code=403, detail=response["error"])
+
     try:
         student = StudentService.getStudentByRollNo(rollno)
         if student is None:
@@ -147,12 +160,18 @@ async def get_student_attendance_api(rollno: int):
 
 
 @router.get("/me/attendances")
-async def get_my_attendances_api():
+async def get_my_attendances_api(current_student: Student = Depends(require_student)):
     """Get current student's attendance records."""
-    log.warning("get_my_attendances_called_without_auth")
-    response = error_response(
-        ErrorCode.UNAUTHORIZED,
-        "JWT token required in Authorization header",
-        401
-    )
-    raise HTTPException(status_code=401, detail=response["error"])
+    log.info("get_my_attendances", rollno=current_student.rollno)
+    try:
+        data = AttendanceService.listAttendances(rollNo=current_student.rollno)
+        return success_response(data)
+    except Exception as e:
+        log.error("get_my_attendances_error", rollno=current_student.rollno, error=str(e))
+        response = error_response(
+            ErrorCode.INTERNAL_ERROR,
+            "Failed to retrieve attendance",
+            500
+        )
+        raise HTTPException(status_code=500, detail=response["error"])
+

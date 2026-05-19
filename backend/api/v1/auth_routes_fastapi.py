@@ -150,12 +150,12 @@ async def login_api(payload: LoginRequest):
     invalid_credentials()
 
 
-@router.get("/auth/me")
-async def get_me_api(payload: dict = Depends(get_current_token_payload)):
-    user, role = AuthService.get_user_by_token_payload(payload)
+from backend.api.v1.dependencies import get_current_user
 
-    if not user:
-        unauthorized("User not found")
+
+@router.get("/auth/me")
+async def get_me_api(current_user_data: tuple = Depends(get_current_user)):
+    user, role = current_user_data
 
     if role == "student":
         return success_response(

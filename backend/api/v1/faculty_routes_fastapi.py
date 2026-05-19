@@ -2,13 +2,14 @@
 FastAPI Faculty Routes
 Migration of Flask faculty_routes.py to FastAPI.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from datetime import datetime
 
 from backend.services.auth_service import AuthService
 from backend.models import Faculty
 from backend.extensions import db
+from backend.api.v1.dependencies import require_faculty, require_admin, get_current_user
 
 router = APIRouter()
 
@@ -54,17 +55,15 @@ def error_response(code: str, message: str, status_code: int):
 
 
 @router.get("/faculty")
-async def list_faculty_api():
+async def list_faculty_api(current_user: tuple = Depends(require_faculty)):
     """List all faculty members (faculty-only)."""
-    # TODO: Add JWT faculty verification
     faculty_list = Faculty.query.all()
     return success_response([serialize_faculty(f) for f in faculty_list])
 
 
 @router.get("/faculty/{faculty_id}")
-async def get_faculty_api(faculty_id: int):
+async def get_faculty_api(faculty_id: int, current_user: tuple = Depends(require_faculty)):
     """Get single faculty member (faculty-only)."""
-    # TODO: Add JWT faculty verification
     faculty = Faculty.query.filter_by(f_id=faculty_id).first()
     if not faculty:
         error_response("NOT_FOUND", "Faculty member not found", 404)
@@ -72,9 +71,8 @@ async def get_faculty_api(faculty_id: int):
 
 
 @router.post("/faculty", status_code=201)
-async def create_faculty_api(payload: CreateFacultyRequest):
+async def create_faculty_api(payload: CreateFacultyRequest, current_admin: Faculty = Depends(require_admin)):
     """Create new faculty member (admin-only)."""
-    # TODO: Add JWT admin verification
     name = payload.name
     course = payload.course or ""
     email = payload.email
@@ -97,9 +95,21 @@ async def create_faculty_api(payload: CreateFacultyRequest):
 
 
 @router.put("/faculty/{faculty_id}")
-async def update_faculty_api(faculty_id: int, payload: UpdateFacultyRequest):
+async def update_faculty_api(
+    faculty_id: int, 
+    payload: UpdateFacultyRequest, 
+    current_user_data: tuple = Depends(get_current_user)
+):
     """Update faculty member (admin-only or own profile for faculty)."""
-    # TODO: Add JWT verification and extract current_faculty_id from token
+    current_user, role = current_user_data
+    
+    # Check if user is faculty and either admin or updating self
+    is_admin = (role == "faculty" and getattr(current_user, "is_admin", False))
+    is_self = (role == "faculty" and current_user.f_id == faculty_id)
+    
+    if not (is_admin or is_self):
+        error_response("UNAUTHORIZED", "Not authorized to update this faculty", 403)
+
     faculty = Faculty.query.filter_by(f_id=faculty_id).first()
     if not faculty:
         error_response("NOT_FOUND", "Faculty member not found", 404)
@@ -111,7 +121,8 @@ async def update_faculty_api(faculty_id: int, payload: UpdateFacultyRequest):
     if payload.course is not None:
         faculty.course = payload.course
     if payload.isAdmin is not None:
-        # TODO: Only allow if current user is admin
+        if not is_admin:
+            error_response("UNAUTHORIZED", "Only admins can change admin status", 403)
         faculty.is_admin = bool(payload.isAdmin)
 
     db.session.commit()
@@ -119,9 +130,8 @@ async def update_faculty_api(faculty_id: int, payload: UpdateFacultyRequest):
 
 
 @router.delete("/faculty/{faculty_id}")
-async def delete_faculty_api(faculty_id: int):
+async def delete_faculty_api(faculty_id: int, current_admin: Faculty = Depends(require_admin)):
     """Delete faculty member (admin-only)."""
-    # TODO: Add JWT admin verification
     faculty = Faculty.query.filter_by(f_id=faculty_id).first()
     if not faculty:
         error_response("NOT_FOUND", "Faculty member not found", 404)
@@ -129,3 +139,4 @@ async def delete_faculty_api(faculty_id: int):
     db.session.delete(faculty)
     db.session.commit()
     return success_response({"message": "Faculty member deleted"})
+
