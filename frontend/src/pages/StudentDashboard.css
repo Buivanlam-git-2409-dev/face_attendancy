@@ -41,3 +41,30 @@ td { padding: 1rem; border-bottom: 1px solid #eee; }
 .badge.present { background: #e6f4ea; color: #1e8e3e; }
 .badge.absent { background: #fce8e6; color: #d93025; }
 .badge.late { background: #fff8e1; color: #f9ab00; }
+.student-dashboard__section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.student-dashboard__refresh {
+  border: 1px solid var(--ui-color-border);
+  background: white;
+  color: var(--color-navy);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.student-dashboard__refresh:hover:not(:disabled) {
+  border-color: var(--color-navy);
+  background: #f8fafc;
+}
+
+.student-dashboard__refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

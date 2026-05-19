@@ -1,50 +1,100 @@
-import React, { useEffect, useState } from 'react';
-import { DashboardLayout, Card, AttendanceTable } from '../shared/ui';
-import { attendanceService } from '../shared/api/attendanceService';
-import './StudentDashboard.css';
+import React, { useEffect, useMemo, useState } from 'react'
+import { DashboardLayout, Card, AttendanceTable, Alert } from '../shared/ui'
+import { attendanceService } from '../shared/api/attendanceService'
+import './StudentDashboard.css'
 
 export const StudentDashboard = () => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [records, setRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const fetchAttendance = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const data = await attendanceService.getMyAttendances()
+      const normalizedData = Array.isArray(data) ? data : data?.records || []
+      setRecords(normalizedData)
+    } catch (err) {
+      setError(err.message || 'Unable to load attendance records')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        const response = await attendanceService.getMyAttendances();
-        setData(response);
-      } catch (error) {
-        console.error("Error fetching attendance", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAttendance();
-  }, []);
+    fetchAttendance()
+  }, [])
 
-  const totalClasses = data.length;
-  const attended = data.filter(a => a.status === 'Present').length;
-  const percentage = totalClasses ? Math.round((attended / totalClasses) * 100) : 0;
+  const stats = useMemo(() => {
+    const totalClasses = records.length
+    const attended = records.filter((item) => {
+      const status = String(item.status || item.attendanceStatus || 'present').toLowerCase()
+      return status === 'present'
+    }).length
+
+    const percentage = totalClasses
+      ? Math.round((attended / totalClasses) * 100)
+      : 0
+
+    return {
+      totalClasses,
+      attended,
+      percentage,
+    }
+  }, [records])
 
   return (
     <DashboardLayout>
       <div className="student-dashboard">
         <h1>My Attendance Overview</h1>
 
+        {error && (
+          <Alert variant="error">
+            {error}
+          </Alert>
+        )}
+
         <div className="stats-grid">
-          <Card><h3>Total Classes</h3><p>{totalClasses}</p></Card>
-          <Card><h3>Present</h3><p>{attended}</p></Card>
-          <Card className="gold"><h3>Attendance Rate</h3><p>{percentage}%</p></Card>
+          <Card>
+            <h3>Total Classes</h3>
+            <p>{stats.totalClasses}</p>
+          </Card>
+
+          <Card>
+            <h3>Present</h3>
+            <p>{stats.attended}</p>
+          </Card>
+
+          <Card className="gold">
+            <h3>Attendance Rate</h3>
+            <p>{stats.percentage}%</p>
+          </Card>
         </div>
 
         <div className="attendance-history">
-          <h2>Attendance History</h2>
-          <AttendanceTable 
-            data={data} 
+          <div className="student-dashboard__section-header">
+            <h2>Attendance History</h2>
+            <button
+              type="button"
+              className="student-dashboard__refresh"
+              onClick={fetchAttendance}
+              disabled={loading}
+            >
+              Refresh
+            </button>
+          </div>
+
+          <AttendanceTable
+            data={records}
             loading={loading}
-            columns={['date', 'course', 'status']}
+            error={error}
+            columns={['date', 'course', 'lecture', 'status', 'time', 'markedBy']}
+            emptyMessage="No attendance records found"
           />
         </div>
       </div>
     </DashboardLayout>
-  );
-};
+  )
+}

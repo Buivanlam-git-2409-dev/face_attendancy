@@ -1,24 +1,32 @@
 .dashboard-container {
   display: flex;
   min-height: 100vh;
+  background: var(--ui-color-bg, #f4f7f9);
 }
 
 .dashboard-sidebar {
-  width: var(--sidebar-width);
-  background: var(--color-navy);
+  width: var(--sidebar-width, 260px);
+  background: var(--color-navy, #0a2540);
   color: white;
   padding: 2rem;
+  flex-shrink: 0;
 }
 
 .sidebar-logo {
   font-size: 1.5rem;
   font-weight: bold;
-  color: var(--color-gold);
+  color: var(--color-gold, #c5a059);
   margin-bottom: 2rem;
 }
 
 .dashboard-sidebar ul {
   list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dashboard-sidebar li {
+  margin-bottom: 0.25rem;
 }
 
 .dashboard-sidebar a {
@@ -26,14 +34,17 @@
   text-decoration: none;
   display: block;
   padding: 0.75rem 0;
+  transition: color 0.2s ease;
 }
 
-.dashboard-sidebar a:hover {
-  color: var(--color-gold);
+.dashboard-sidebar a:hover,
+.dashboard-sidebar a.active {
+  color: var(--color-gold, #c5a059);
 }
 
 .main-content {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -43,10 +54,93 @@
   padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   border-bottom: 1px solid #eee;
+  gap: 1rem;
+}
+
+.dashboard-topbar__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-navy, #0a2540);
+}
+
+.dashboard-topbar__subtitle {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.dashboard-topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dashboard-topbar__user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.dashboard-topbar__name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-navy, #0a2540);
+}
+
+.dashboard-topbar__role {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .content-inner {
   padding: 2rem;
   flex: 1;
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+
+  .dashboard-sidebar {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .sidebar-logo {
+    margin-bottom: 1rem;
+  }
+
+  .dashboard-sidebar ul {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+  }
+
+  .dashboard-sidebar li {
+    margin-bottom: 0;
+  }
+
+  .dashboard-topbar {
+    padding: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dashboard-topbar__user {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-topbar__user-info {
+    align-items: flex-start;
+  }
+
+  .content-inner {
+    padding: 1rem;
+  }
 }

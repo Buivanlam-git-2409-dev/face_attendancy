@@ -38,7 +38,8 @@ class ErrorDetail(BaseModel):
 # ============================================================================
 
 class CreateAttendanceRequest(BaseModel):
-    """Create attendance record request for legacy Attendance table."""
+    """Create attendance record request."""
+
     rollno: int = Field(..., gt=0, description="Student roll number")
     course: str = Field(..., min_length=1, max_length=100, description="Course name")
     lecture_no: int = Field(..., ge=0, description="Lecture number")
@@ -48,19 +49,20 @@ class CreateAttendanceRequest(BaseModel):
             "example": {
                 "rollno": 12001,
                 "course": "Computer Science",
-                "lecture_no": 1
+                "lecture_no": 1,
             }
         }
 
     @validator("course")
-    def validate_course(cls, v):
-        if not v.strip():
+    def validate_course(cls, value):
+        if not value or not value.strip():
             raise ValueError("Course cannot be empty")
-        return v.strip()
+        return value.strip()
 
 
 class UpdateAttendanceRequest(BaseModel):
-    """Update attendance record request for legacy Attendance table."""
+    """Update attendance record request."""
+
     rollno: Optional[int] = Field(None, gt=0, description="Student roll number")
     course: Optional[str] = Field(None, min_length=1, max_length=100, description="Course name")
     lecture_no: Optional[int] = Field(None, ge=0, description="Lecture number")
@@ -70,19 +72,20 @@ class UpdateAttendanceRequest(BaseModel):
             "example": {
                 "rollno": 12001,
                 "course": "Computer Science",
-                "lecture_no": 1
+                "lecture_no": 1,
             }
         }
 
     @validator("course")
-    def validate_course(cls, v):
-        if v is not None and not v.strip():
+    def validate_course(cls, value):
+        if value is not None and not value.strip():
             raise ValueError("Course cannot be empty")
-        return v.strip() if v is not None else v
+        return value.strip() if value is not None else value
 
 
 class AttendanceResponse(BaseModel):
-    """Attendance response model for legacy Attendance table."""
+    """Attendance response model."""
+
     attendanceId: int
     rollno: int
     course: Optional[str] = None
@@ -94,6 +97,7 @@ class AttendanceResponse(BaseModel):
 
 class AttendanceListResponse(BaseModel):
     """List of attendance records response."""
+
     records: List[AttendanceResponse]
     total: int
 class LoginRequest(BaseModel):
@@ -257,77 +261,6 @@ class FacultyResponse(BaseModel):
     course: str
     is_admin: bool
 
-
-# ============================================================================
-# Attendance Models
-# ============================================================================
-
-class CreateAttendanceRequest(BaseModel):
-    """Create attendance record request."""
-    rollno: int = Field(..., gt=0, description="Student roll number")
-    date: str = Field(..., description="Date (YYYY-MM-DD format)")
-    time_in: Optional[str] = None
-    time_out: Optional[str] = None
-    status: str = Field("present", description="Status: present, absent, late")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "rollno": 12001,
-                "date": "2024-05-19",
-                "status": "present",
-                "time_in": "09:00:00",
-                "time_out": "16:30:00"
-            }
-        }
-
-    @validator('status')
-    def validate_status(cls, v):
-        valid_statuses = {"present", "absent", "late", "excused"}
-        if v not in valid_statuses:
-            raise ValueError(f'Status must be one of {valid_statuses}')
-        return v
-
-
-class UpdateAttendanceRequest(BaseModel):
-    """Update attendance record request."""
-    status: Optional[str] = None
-    time_in: Optional[str] = None
-    time_out: Optional[str] = None
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "status": "present",
-                "time_in": "09:00:00",
-                "time_out": "16:30:00"
-            }
-        }
-
-    @validator('status')
-    def validate_status(cls, v):
-        if v is not None:
-            valid_statuses = {"present", "absent", "late", "excused"}
-            if v not in valid_statuses:
-                raise ValueError(f'Status must be one of {valid_statuses}')
-        return v
-
-
-class AttendanceResponse(BaseModel):
-    """Attendance response model."""
-    id: int
-    rollno: int
-    date: str
-    time_in: Optional[str]
-    time_out: Optional[str]
-    status: str
-    created_at: Optional[datetime] = None
-
-
-class AttendanceListResponse(BaseModel):
-    """List of attendance records response."""
-    records: List[AttendanceResponse]
-    total: int
 
 
 # ============================================================================

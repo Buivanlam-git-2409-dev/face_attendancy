@@ -152,3 +152,34 @@
     padding: 4px 8px;
   }
 }
+.attendance-table__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.attendance-table__action-btn {
+  border: 1px solid var(--ui-color-border);
+  background: var(--ui-color-surface);
+  color: var(--ui-color-primary);
+  border-radius: var(--ui-radius-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.attendance-table__action-btn:hover {
+  border-color: var(--ui-color-primary);
+  background: var(--ui-color-surface-alt);
+}
+
+.attendance-table__action-btn--danger {
+  color: var(--ui-color-danger);
+}
+
+.attendance-table__action-btn--danger:hover {
+  border-color: var(--ui-color-danger);
+  background: var(--ui-color-danger-bg);
+}

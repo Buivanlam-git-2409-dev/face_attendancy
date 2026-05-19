@@ -60,3 +60,30 @@ td { padding: 1rem; border-bottom: 1px solid #eee; }
 }
 
 .badge.present { background: #e6f4ea; color: #1e8e3e; }
+.faculty-dashboard__subtitle {
+  color: #666;
+  margin: 0.25rem 0 0;
+}
+
+.attendance-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.attendance-form__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.faculty-dashboard__table {
+  margin-top: 2rem;
+}
+
+@media (max-width: 900px) {
+  .faculty-dashboard .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
