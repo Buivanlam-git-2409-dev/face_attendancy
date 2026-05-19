@@ -81,12 +81,14 @@ class Faculty(db.Model):
 
 class Department(db.Model):
     __tablename__ = "Department"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     code = db.Column(db.String(20), unique=True)
 
 class Semester(db.Model):
     __tablename__ = "Semester"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False) # e.g., Fall 2024
     start_date = db.Column(db.Date)
@@ -95,6 +97,7 @@ class Semester(db.Model):
 
 class Course(db.Model):
     __tablename__ = "Course"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(20), unique=True, nullable=False) # e.g., CS101
     name = db.Column(db.String(100), nullable=False)
@@ -105,12 +108,14 @@ class Course(db.Model):
 
 class ClassRoom(db.Model):
     __tablename__ = "ClassRoom"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False) # e.g., A-101
     capacity = db.Column(db.Integer)
 
 class Enrollment(db.Model):
     __tablename__ = "Enrollment"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("Student.id"), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey("Course.id"), nullable=False)
@@ -123,6 +128,7 @@ class Enrollment(db.Model):
 
 class AttendanceSession(db.Model):
     __tablename__ = "AttendanceSession"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True)
     course_id = db.Column(db.Integer, db.ForeignKey("Course.id"), nullable=False)
     faculty_id = db.Column(db.Integer, db.ForeignKey("Faculty.f_id"), nullable=False)
@@ -141,6 +147,7 @@ class AttendanceSession(db.Model):
 
 class AttendanceRecord(db.Model):
     __tablename__ = "AttendanceRecord"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey("AttendanceSession.id"), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey("Student.id"), nullable=False)
@@ -154,6 +161,7 @@ class AttendanceRecord(db.Model):
 
 class FaceEmbedding(db.Model):
     __tablename__ = "FaceEmbedding"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("Student.id"), nullable=False)
     embedding = db.Column(db.JSON, nullable=False) # Store as JSON array of floats
