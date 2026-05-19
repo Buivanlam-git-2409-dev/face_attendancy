@@ -1,37 +1,21 @@
 """
 FastAPI Student Routes
-Migration of Flask student_routes.py to FastAPI.
+Migration of Flask student_routes.py to FastAPI with validation and logging.
 """
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+import structlog
 
+from backend.api.v1.validation_models import (
+    RegisterStudentRequest,
+    StudentResponse,
+)
+from backend.api.error_handler import error_response, success_response, ErrorCode
 from backend.services.attendance_service import AttendanceService
 from backend.services.auth_service import AuthService
 from backend.services.student_service import StudentService
 
 router = APIRouter()
-
-
-class RegisterStudentRequest(BaseModel):
-    rollno: int
-    name: str
-    email: str
-    password: str
-    semester: str = ""
-    pic_path: str = ""
-
-
-def success_response(data):
-    """Standardized success response."""
-    return {"success": True, "data": data, "error": None}
-
-
-def error_response(code: str, message: str, status_code: int):
-    """Standardized error response."""
-    raise HTTPException(
-        status_code=status_code,
-        detail={"code": code, "message": message}
-    )
+log = structlog.get_logger(__name__)
 
 
 @router.post("/students/register", status_code=201)
@@ -44,8 +28,7 @@ async def register_student_api(payload: RegisterStudentRequest):
     semester = payload.semester or ""
     pic_path = payload.pic_path or ""
 
-    if not all([rollno, name, email, password]):
-        error_response("INVALID_PAYLOAD", "rollno, name, email, and password are required", 400)
+    log.info("student_registration_attempt", rollno=rollno, email=email)
 
     try:
         student, error = AuthService.registerStudent(
@@ -57,7 +40,15 @@ async def register_student_api(payload: RegisterStudentRequest):
             picPath=pic_path,
         )
         if error:
-            error_response("REGISTRATION_FAILED", error, 400)
+            log.warning("student_registration_failed", rollno=rollno, email=email, reason=error)
+            response = error_response(
+                ErrorCode.CONFLICT,
+                error,
+                400
+            )
+            raise HTTPException(status_code=400, detail=response["error"])
+
+        log.info("student_registration_success", rollno=rollno, email=email)
         return success_response({
             "message": "Student registered successfully",
             "user": {
@@ -67,39 +58,101 @@ async def register_student_api(payload: RegisterStudentRequest):
             },
         })
     except Exception as e:
-        error_response("REGISTRATION_ERROR", str(e), 400)
+        log.error("student_registration_error", rollno=rollno, error=str(e), exc_info=e)
+        response = error_response(
+            ErrorCode.INTERNAL_ERROR,
+            "Registration failed",
+            400
+        )
+        raise HTTPException(status_code=400, detail=response["error"])
 
 
 @router.get("/students")
 async def list_students_api():
     """List all students (faculty only)."""
+    log.info("list_students_request")
     # TODO: Add JWT faculty verification
-    return success_response(StudentService.listStudents())
+    try:
+        students = StudentService.listStudents()
+        return success_response(students)
+    except Exception as e:
+        log.error("list_students_error", error=str(e), exc_info=e)
+        response = error_response(
+            ErrorCode.INTERNAL_ERROR,
+            "Failed to retrieve students",
+            500
+        )
+        raise HTTPException(status_code=500, detail=response["error"])
 
 
 @router.get("/students/{rollno}")
 async def get_student_api(rollno: int):
     """Get student by roll number (faculty only)."""
+    log.info("get_student_request", rollno=rollno)
     # TODO: Add JWT faculty verification
-    student = StudentService.getStudentByRollNo(rollno)
-    if student is None:
-        error_response("NOT_FOUND", "Student not found", 404)
-    return success_response(student)
+    try:
+        student = StudentService.getStudentByRollNo(rollno)
+        if student is None:
+            log.warning("get_student_not_found", rollno=rollno)
+            response = error_response(
+                ErrorCode.NOT_FOUND,
+                "Student not found",
+                404
+            )
+            raise HTTPException(status_code=404, detail=response["error"])
+
+        log.info("get_student_success", rollno=rollno)
+        return success_response(student)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("get_student_error", rollno=rollno, error=str(e), exc_info=e)
+        response = error_response(
+            ErrorCode.INTERNAL_ERROR,
+            "Failed to retrieve student",
+            500
+        )
+        raise HTTPException(status_code=500, detail=response["error"])
 
 
 @router.get("/students/{rollno}/attendances")
 async def get_student_attendance_api(rollno: int):
     """Get student's attendance records (faculty only)."""
+    log.info("get_student_attendance_request", rollno=rollno)
     # TODO: Add JWT faculty verification
-    student = StudentService.getStudentByRollNo(rollno)
-    if student is None:
-        error_response("NOT_FOUND", "Student not found", 404)
-    data = AttendanceService.listAttendances(rollNo=rollno)
-    return success_response(data)
+    try:
+        student = StudentService.getStudentByRollNo(rollno)
+        if student is None:
+            log.warning("get_student_attendance_not_found", rollno=rollno)
+            response = error_response(
+                ErrorCode.NOT_FOUND,
+                "Student not found",
+                404
+            )
+            raise HTTPException(status_code=404, detail=response["error"])
+
+        data = AttendanceService.listAttendances(rollNo=rollno)
+        log.info("get_student_attendance_success", rollno=rollno)
+        return success_response(data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("get_student_attendance_error", rollno=rollno, error=str(e), exc_info=e)
+        response = error_response(
+            ErrorCode.INTERNAL_ERROR,
+            "Failed to retrieve attendance",
+            500
+        )
+        raise HTTPException(status_code=500, detail=response["error"])
 
 
 @router.get("/me/attendances")
 async def get_my_attendances_api():
     """Get current student's attendance records."""
-    # TODO: Add JWT student verification and extract rollno from token
-    error_response("UNAUTHORIZED", "JWT token required in Authorization header", 401)
+    log.warning("get_my_attendances_called_without_auth")
+    response = error_response(
+        ErrorCode.UNAUTHORIZED,
+        "JWT token required in Authorization header",
+        401
+    )
+    raise HTTPException(status_code=401, detail=response["error"])
