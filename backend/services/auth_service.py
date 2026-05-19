@@ -16,7 +16,7 @@ class AuthService:
     def authenticate(email: str, password: str):
         """Universal authentication using the User model"""
         user = User.query.filter_by(email=email).first()
-        if user and verify_password(password, user.password):
+        if user and user.check_password(password):
             return user
         return None
 
@@ -29,7 +29,7 @@ class AuthService:
 
         # Fallback to old table if user not linked yet
         student = Student.query.filter_by(email=email).first()
-        if student and verify_password(password, student.password):
+        if student and student.check_password(password):
             return student
         return None
 
@@ -42,7 +42,7 @@ class AuthService:
 
         # Fallback to old table if user not linked yet
         faculty = Faculty.query.filter_by(email=email).first()
-        if faculty and verify_password(password, faculty.password):
+        if faculty and faculty.check_password(password):
             return faculty
         return None
 
@@ -95,13 +95,12 @@ class AuthService:
         # 1. Create User
         role_name = 'ADMIN' if isAdmin else 'FACULTY'
         role = AuthService.get_role(role_name)
-        hashed = hash_password(password)
 
         user = User(
             email=email,
-            password=hashed,
             role=role
         )
+        user.set_password(password)
         db.session.add(user)
         db.session.flush() # Get user.id
 
@@ -111,10 +110,10 @@ class AuthService:
             name=name,
             course=course,
             email=email,
-            password=hashed, # redundant for now
             is_admin=isAdmin,
             registered_on=datetime.now(),
         )
+        faculty.set_password(password)
 
         db.session.add(faculty)
         db.session.commit()
@@ -136,13 +135,12 @@ class AuthService:
 
         # 1. Create User
         role = AuthService.get_role('STUDENT')
-        hashed = hash_password(password)
-
+        
         user = User(
             email=email,
-            password=hashed,
             role=role
         )
+        user.set_password(password)
         db.session.add(user)
         db.session.flush()
 
@@ -153,10 +151,10 @@ class AuthService:
             name=name,
             semester=semester,
             email=email,
-            password=hashed, # redundant for now
             pic_path=picPath,
             registered_on=datetime.now(),
         )
+        student.set_password(password)
 
         db.session.add(student)
         db.session.commit()

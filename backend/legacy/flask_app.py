@@ -38,8 +38,8 @@ def create_legacy_flask_app() -> Flask:
     legacy_app.config.setdefault("SECRET_KEY", os.getenv("SECRET_KEY", "change-me"))
 
     # YOLO face detector config from the original Flask file.
-    yolo_face_model_path = os.environ.get("YOLO_FACE_MODEL_PATH", "face_model/best.pt")
-    yolo_face_conf = float(os.environ.get("YOLO_FACE_CONF", "0.50"))
+    yolo_face_model_path = Config.YOLO_FACE_MODEL_PATH
+    yolo_face_conf = Config.YOLO_FACE_CONF
     face_detector = load_face_detector(yolo_face_model_path)
 
     db.init_app(legacy_app)

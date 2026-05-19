@@ -1,3 +1,4 @@
+from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.sql import func
 from backend.extensions import db
 
@@ -18,13 +19,19 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
+    hashed_password = db.Column(db.String(255), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey("Role.id"))
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, server_default=func.now())
     updated_at = db.Column(db.DateTime, onupdate=func.now())
 
     role = db.relationship("Role", backref=db.backref("users", lazy=True))
+
+    def set_password(self, password):
+        self.hashed_password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.hashed_password, password)
 
     def __repr__(self):
         return f"<User {self.email}>"
@@ -39,11 +46,17 @@ class Student(db.Model):
     name = db.Column(db.String(80))
     semester = db.Column(db.String(80))
     email = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
+    hashed_password = db.Column(db.String(255), nullable=False)
     pic_path = db.Column(db.Text)
     registered_on = db.Column(db.DateTime)
 
     user = db.relationship("User", backref=db.backref("student_profile", uselist=False))
+
+    def set_password(self, password):
+        self.hashed_password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.hashed_password, password)
 
 class Faculty(db.Model):
     __tablename__ = "Faculty"
@@ -54,11 +67,17 @@ class Faculty(db.Model):
     name = db.Column(db.String(80))
     course = db.Column(db.String(80))
     email = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
+    hashed_password = db.Column(db.String(255), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     registered_on = db.Column(db.DateTime)
 
     user = db.relationship("User", backref=db.backref("faculty_profile", uselist=False))
+
+    def set_password(self, password):
+        self.hashed_password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.hashed_password, password)
 
 class Department(db.Model):
     __tablename__ = "Department"

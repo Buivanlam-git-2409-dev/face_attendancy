@@ -5,36 +5,34 @@ import cv2
 import face_recognition
 import numpy as np
 
+from backend.extensions import db
 from backend.repositories.attendance_repository import AttendanceRepository
 from backend.video_capture import VideoCapture
+from backend.face_detector import load_face_detector, detect_face_locations
+from backend.config import Config
 
 
 class FaceRecognitionService:
     @staticmethod
-    def loadKnownFaces(imagesDir: str):
+    def loadKnownFacesFromDb():
+        """Load face embeddings from database."""
+        from backend.models import FaceEmbedding, Student
+        
         knownFaceEncodings = []
         knownFaceNames = []
-        for (_, _, filenames) in os.walk(imagesDir):
-            for filename in filenames:
-                if filename.lower() == "temp.jpg":
-                    continue
-                imagePath = os.path.join(imagesDir, filename)
-                image = face_recognition.load_image_file(imagePath)
-                encodings = face_recognition.face_encodings(image)
-                if len(encodings) == 0:
-                    continue
-                knownFaceNames.append(filename[:-4])
-                knownFaceEncodings.append(encodings[0])
-            break
+        
+        embeddings = db.session.query(FaceEmbedding, Student).join(Student).all()
+        for embedding_obj, student in embeddings:
+            knownFaceEncodings.append(np.array(embedding_obj.embedding))
+            knownFaceNames.append(str(student.rollno))
+            
         return knownFaceEncodings, knownFaceNames
 
     @staticmethod
     def markAttendanceFromRecognition(knownFaceName: str, course: str, lectureNo: int, markedBy: str) -> bool:
-        rollNoToken = knownFaceName.split("-")[0]
-        if not rollNoToken.isdigit():
-            return False
-
-        rollNo = int(rollNoToken)
+        # Note: Rollno is now just knownFaceName (student.rollno)
+        rollNo = int(knownFaceName)
+        
         hasExisting = AttendanceRepository.hasAnyAttendanceForRollNo(rollNo)
         alreadyMarked = AttendanceRepository.isAlreadyMarkedForLecture(rollNo, course, lectureNo)
         if (not hasExisting) or (not alreadyMarked):
@@ -58,12 +56,16 @@ class FaceRecognitionService:
         course: str,
         lectureNo: int,
         markedBy: str,
-        imagesDir="static/images/users",
         displayWindow=True,
         maxDurationSeconds=None,
     ):
         videoCapture = VideoCapture(0)
-        knownFaceEncodings, knownFaceNames = FaceRecognitionService.loadKnownFaces(imagesDir)
+        knownFaceEncodings, knownFaceNames = FaceRecognitionService.loadKnownFacesFromDb()
+        
+        # Load YOLO detector if configured
+        face_detector = load_face_detector(Config.YOLO_FACE_MODEL_PATH)
+        yolo_conf = Config.YOLO_FACE_CONF
+
         faceLocations = []
         faceNames = []
         processThisFrame = True
@@ -75,7 +77,8 @@ class FaceRecognitionService:
             frame = videoCapture.read()
             if processThisFrame:
                 faceLocations, faceNames, isMarkedInFrame, newlyMarkedCount = FaceRecognitionService.processFrame(
-                    frame, knownFaceEncodings, knownFaceNames, course, lectureNo, markedBy
+                    frame, knownFaceEncodings, knownFaceNames, course, lectureNo, markedBy,
+                    detector=face_detector, conf=yolo_conf
                 )
                 markedCount += newlyMarkedCount
             processThisFrame = not processThisFrame
@@ -94,9 +97,17 @@ class FaceRecognitionService:
         return {"markedCount": markedCount}
 
     @staticmethod
-    def processFrame(frame, knownFaceEncodings, knownFaceNames, course: str, lectureNo: int, markedBy: str):
-        faceLocations = face_recognition.face_locations(frame)
-        faceEncodings = face_recognition.face_encodings(frame, faceLocations)
+    def processFrame(
+        frame, knownFaceEncodings, knownFaceNames, course: str, lectureNo: int, markedBy: str,
+        detector=None, conf=0.50
+    ):
+        # Use custom detector if available, else fallback to dlib
+        faceLocations = detect_face_locations(frame, detector=detector, conf=conf)
+        
+        # face_recognition.face_encodings expects RGB frame
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        faceEncodings = face_recognition.face_encodings(rgb_frame, faceLocations)
+        
         faceNames = []
         isMarked = False
         newlyMarkedCount = 0
