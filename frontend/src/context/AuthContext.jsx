@@ -13,14 +13,24 @@ const AuthProviderComponent = ({ children }) => {
     if (sessionCheckDone.current) return
 
     const restoreSession = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setLoading(false)
+        sessionCheckDone.current = true
+        return
+      }
+
       try {
         const result = await authService.getMe()
         if (result.success) {
           setUser(result.data.user)
           setRole(result.data.role)
+        } else {
+          localStorage.removeItem('token')
         }
       } catch (error) {
-        // Not logged in, ignore
+        // Not logged in or invalid token
+        localStorage.removeItem('token')
       } finally {
         setLoading(false)
         sessionCheckDone.current = true
@@ -34,24 +44,29 @@ const AuthProviderComponent = ({ children }) => {
     try {
       const result = await authService.login(email, password, roleParam)
       if (result.success) {
-        setUser(result.data.user)
-        setRole(result.data.role)
-        return { success: true, role: result.data.role }
+        const { accessToken, user: userData, role: userRole } = result.data
+        localStorage.setItem('token', accessToken)
+        setUser(userData)
+        setRole(userRole)
+        return { success: true, role: userRole }
       } else {
         return { success: false, error: result.error.message }
       }
     } catch (error) {
-      return { success: false, error: 'Login failed' }
+      const errorMessage = error.response?.data?.error?.message || 'Login failed'
+      return { success: false, error: errorMessage }
     }
   }, [])
 
   const logout = useCallback(async () => {
     try {
       await authService.logout()
-      setUser(null)
-      setRole(null)
     } catch (error) {
       console.error('Logout failed:', error)
+    } finally {
+      localStorage.removeItem('token')
+      setUser(null)
+      setRole(null)
     }
   }, [])
 
