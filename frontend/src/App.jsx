@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './shared/ui/ProtectedRoute'
+import HomeDashboard from './pages/HomeDashboard'
 import { LoginPage } from './pages/LoginPage'
 import { StudentDashboard } from './pages/StudentDashboard'
 import { FacultyDashboard } from './pages/FacultyDashboard'
@@ -12,6 +13,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          <Route path="/" element={<HomeDashboard />} />
           <Route path="/login" element={<LoginPage />} />
           
           <Route
@@ -32,8 +34,7 @@ function App() {
             }
           />
 
-          <Route path="/" element={<Navigate to="/login" />} />
-          <Route path="*" element={<Navigate to="/login" />} />
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

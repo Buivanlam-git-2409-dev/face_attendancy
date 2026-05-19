@@ -24,29 +24,41 @@ from backend.api.v1.recognition_routes_fastapi import router as recognition_rout
 
 
 # Initialize database (using Flask app context for SQLAlchemy)
-def init_db():
-    """Initialize database with Flask app context."""
+def create_flask_bridge():
+    """Create a Flask app to bridge Flask-SQLAlchemy with FastAPI."""
     try:
         from flask import Flask as FlaskApp
         flask_app = FlaskApp(__name__)
         flask_app.config.from_object(Config)
         db.init_app(flask_app)
-        with flask_app.app_context():
-            db.create_all()
-            print("[DB] Database initialized")
+        # Push a persistent app context so that db.session and Model.query work
+        ctx = flask_app.app_context()
+        ctx.push()
+        return flask_app, ctx
     except Exception as e:
-        print(f"[WARN] Database initialization: {e}")
+        print(f"[WARN] Flask bridge initialization: {e}")
+        return None, None
+
+
+# Create the bridge and ensure db is initialized
+flask_app, flask_ctx = create_flask_bridge()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle startup and shutdown events."""
     # Startup
-    init_db()
+    if flask_app:
+        with flask_app.app_context():
+            db.create_all()
+            print("[DB] Database initialized")
+    
     init_celery_config()
     print("[START] FastAPI initialized with Celery enabled")
     yield
     # Shutdown
+    if flask_ctx:
+        flask_ctx.pop()
     print("[STOP] FastAPI shutdown")
 
 
@@ -66,6 +78,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def db_session_middleware(request, call_next):
+    """Ensure database session is removed after each request."""
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        db.session.remove()
 
 
 # Register routers
@@ -112,7 +134,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "backend.app:app",
         host="0.0.0.0",
-        port=5000,
+        port=8000,
         reload=True,
         log_level="info"
     )

@@ -20,6 +20,15 @@ export const FacultyDashboard = () => {
   const [error, setError] = useState('')
   const [filterCourse, setFilterCourse] = useState('')
 
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const handleGoHome = () => {
+    navigate('/')
+  }
+
   useEffect(() => {
     const fetchAttendances = async () => {
       try {
@@ -43,11 +52,6 @@ export const FacultyDashboard = () => {
     fetchAttendances()
   }, [filterCourse, user])
 
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login')
-  }
-
   const uniqueCourses = [...new Set(attendances.map(a => a.course))]
   const courseOptions = [
     { value: '', label: 'All Courses' },
@@ -57,10 +61,15 @@ export const FacultyDashboard = () => {
   return (
     <div className="dashboard">
       <header className="navbar">
-        <div className="navbar-brand">Attendance System</div>
+        <div className="navbar-brand" onClick={handleGoHome} style={{ cursor: 'pointer' }}>
+          Attendance System
+        </div>
         <div className="navbar-user">
           <span className="user-name">Welcome, <strong>{user?.name}</strong></span>
           {user?.isAdmin && <Badge variant="info">Admin</Badge>}
+          <Button variant="ghost" size="sm" onClick={handleGoHome}>
+            Home
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             Logout
           </Button>

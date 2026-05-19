@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { 
   Button, 
@@ -12,12 +12,26 @@ import './LoginPage.css'
 
 export const LoginPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
+  
+  // Extract role from query params
+  const queryParams = new URLSearchParams(location.search)
+  const initialRole = queryParams.get('role') || 'student'
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('student')
+  const [role, setRole] = useState(initialRole)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Update role if query param changes
+  useEffect(() => {
+    const newRole = queryParams.get('role')
+    if (newRole && (newRole === 'student' || newRole === 'faculty')) {
+      setRole(newRole)
+    }
+  }, [location.search])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

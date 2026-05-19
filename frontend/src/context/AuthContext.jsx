@@ -3,7 +3,7 @@ import { authService } from '../shared/api/authService'
 
 export const AuthContext = createContext()
 
-export const AuthProvider = ({ children }) => {
+const AuthProviderComponent = ({ children }) => {
   const [user, setUser] = useState(null)
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -66,6 +66,8 @@ export const AuthProvider = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+
+export const AuthProvider = AuthProviderComponent
 
 export const useAuth = () => {
   const context = React.useContext(AuthContext)

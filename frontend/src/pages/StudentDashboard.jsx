@@ -16,6 +16,15 @@ export const StudentDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const handleGoHome = () => {
+    navigate('/')
+  }
+
   useEffect(() => {
     const fetchAttendances = async () => {
       try {
@@ -35,11 +44,6 @@ export const StudentDashboard = () => {
     fetchAttendances()
   }, [])
 
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login')
-  }
-
   const uniqueCourses = [...new Set(attendances.map(a => a.course))]
   const courseStats = uniqueCourses.map(course => {
     const courseAttendances = attendances.filter(a => a.course === course)
@@ -52,9 +56,14 @@ export const StudentDashboard = () => {
   return (
     <div className="dashboard">
       <header className="navbar">
-        <div className="navbar-brand">Attendance System</div>
+        <div className="navbar-brand" onClick={handleGoHome} style={{ cursor: 'pointer' }}>
+          Attendance System
+        </div>
         <div className="navbar-user">
           <span className="user-name">Welcome, <strong>{user?.name || user?.rollno}</strong></span>
+          <Button variant="ghost" size="sm" onClick={handleGoHome}>
+            Home
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             Logout
           </Button>
