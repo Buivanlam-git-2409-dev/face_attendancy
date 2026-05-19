@@ -1,0 +1,2 @@
+from celery_app import celeryApp
+import backend.tasks.recognition_tasks

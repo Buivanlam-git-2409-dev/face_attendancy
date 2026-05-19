@@ -1,0 +1,6 @@
+face2/
+venv/
+__pycache__/
+*.pyc
+.claude/
+.env

@@ -1,0 +1,119 @@
+.ui-input__wrapper {
+  width: 100%;
+}
+.ui-input__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ui-font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ui-color-text);
+  margin-bottom: 6px;
+}
+
+.ui-input__tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-color-border);
+  color: var(--ui-color-text-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.ui-input__field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ui-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--ui-radius-sm);
+  border: 1px solid var(--ui-color-border);
+  background-color: var(--ui-color-input);
+  color: var(--ui-color-text);
+  font-family: var(--ui-font-body);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.ui-input::placeholder {
+  color: var(--ui-color-input-placeholder);
+}
+
+.ui-input:focus {
+  outline: none;
+  border-color: var(--ui-color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-color-primary) 30%, transparent);
+}
+
+.ui-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ui-input--with-icon {
+  padding-left: 40px;
+}
+
+.ui-input__icon {
+  position: absolute;
+  left: 14px;
+  color: var(--ui-color-text-muted);
+  display: inline-flex;
+  align-items: center;
+}
+
+.ui-input__toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--ui-color-text-muted);
+  font-family: var(--ui-font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ui-input__toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ui-color-focus);
+  border-radius: 999px;
+}
+
+.ui-input--filled {
+  background-color: var(--ui-color-surface-alt);
+}
+
+.ui-input--error {
+  border-color: var(--ui-color-danger);
+}
+
+.ui-input--error:focus {
+  border-color: var(--ui-color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-color-danger) 25%, transparent);
+}
+
+.ui-input--success {
+  border-color: #10b981;
+}
+
+.ui-input--success:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.ui-input__error {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--ui-color-danger);
+  font-family: var(--ui-font-body);
+}

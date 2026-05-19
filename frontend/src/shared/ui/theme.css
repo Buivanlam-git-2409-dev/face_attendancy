@@ -1,0 +1,51 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:wght@500;600&display=swap");
+
+:root {
+  --ui-font-body: "IBM Plex Sans", "Noto Sans", "Segoe UI", sans-serif;
+  --ui-font-heading: "Source Serif 4", "Noto Serif", "Times New Roman", serif;
+  --ui-color-bg: #f6f8fb;
+  --ui-color-surface: #ffffff;
+  --ui-color-surface-alt: #eef2f7;
+  --ui-color-border: #cbd5e1;
+  --ui-color-text: #0f172a;
+  --ui-color-text-muted: #475569;
+  --ui-color-primary: #06b6d4;
+  --ui-color-primary-hover: #0891b2;
+  --ui-color-primary-ink: #ffffff;
+  --ui-color-danger: #dc2626;
+  --ui-color-danger-hover: #b91c1c;
+  --ui-color-focus: #22d3ee;
+  --ui-color-input: #ffffff;
+  --ui-color-input-hover: #f8fafc;
+  --ui-color-input-placeholder: #94a3b8;
+  --ui-color-backdrop: rgba(15, 23, 42, 0.45);
+  --ui-radius-sm: 8px;
+  --ui-radius-md: 12px;
+  --ui-radius-lg: 16px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-shadow-modal: 0 24px 60px rgba(15, 23, 42, 0.18);
+}
+
+[data-theme="dark"] {
+  --ui-color-bg: #0f172a;
+  --ui-color-surface: #111827;
+  --ui-color-surface-alt: #172033;
+  --ui-color-border: #243247;
+  --ui-color-text: #e2e8f0;
+  --ui-color-text-muted: #94a3b8;
+  --ui-color-primary: #22d3ee;
+  --ui-color-primary-hover: #06b6d4;
+  --ui-color-primary-ink: #0f172a;
+  --ui-color-danger: #f87171;
+  --ui-color-danger-hover: #ef4444;
+  --ui-color-focus: #67e8f9;
+  --ui-color-input: #0f172a;
+  --ui-color-input-hover: #111c2f;
+  --ui-color-input-placeholder: #64748b;
+  --ui-color-backdrop: rgba(2, 6, 23, 0.6);
+  --ui-shadow-modal: 0 24px 60px rgba(2, 6, 23, 0.5);
+}
