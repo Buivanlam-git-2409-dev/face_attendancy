@@ -14,14 +14,14 @@ A project focused on automating school attendance using real-time facial recogni
 This plan outlines the steps to transform the current "outdated" codebase into a production-ready, asynchronous web application.
 
 ### Phase 1: Foundation & Infrastructure (High Priority)
-- [ ] **Switch to FastAPI:** Replace Flask with FastAPI for better performance and `async/await` support.
+- [x] **Switch to FastAPI:** Replace Flask with FastAPI for better performance and `async/await` support.
 - [x] **Modern Configuration:** Use `python-dotenv` and `Pydantic Settings` to manage environment variables (DB URLs, Secret Keys).
 - [x] **Security Hardening:** 
     - [x] Implement password hashing (e.g., `bcrypt` or `argon2`).
     - [x] Transition from Session Cookies to **JWT (JSON Web Tokens)** for stateless authentication.
-- [ ] **Database Migration:** 
-    - [ ] Prepare for PostgreSQL.
-    - [ ] Integrate **Alembic** for database schema migrations.
+- [x] **Database Migration:** 
+    - [x] Prepare for PostgreSQL.
+    - [x] Integrate **Alembic** for database schema migrations.
 
 ### Phase 1.5: RESTful API Design & Transition (Immediate)
 - [x] **Define versioned API contract (`/api/v1`)** with consistent response envelope:
@@ -44,7 +44,7 @@ This plan outlines the steps to transform the current "outdated" codebase into a
     - [x] `PUT /api/v1/faculty/{id}`
     - [x] `DELETE /api/v1/faculty/{id}`
 - [x] **Keep legacy UI routes alive** while migrating business logic into services.
-- [ ] **Prepare FastAPI parity map** so each Flask API endpoint can be moved 1:1 to FastAPI routers.
+- [x] **Prepare FastAPI parity map** so each Flask API endpoint can be moved 1:1 to FastAPI routers.
 
 ### Phase 2: AI Processing & Scalability
 - [x] **Background Workers:** Use **Celery + Redis** to handle CPU-intensive tasks like generating face encodings during registration.
@@ -56,7 +56,7 @@ This plan outlines the steps to transform the current "outdated" codebase into a
 
 ### Phase 3: Deployment & DevOps
 - [ ] **Dockerization:** Create a `Dockerfile` and `docker-compose.yml` to bundle the app, database, and Redis.
-- [ ] **API Documentation:** Leverage FastAPI's automatic Swagger/OpenAPI docs for better frontend-backend integration.
+- [x] **API Documentation:** Leverage FastAPI's automatic Swagger/OpenAPI docs for better frontend-backend integration.
 - [ ] **Logging & Monitoring:** Implement structured logging (e.g., `structlog`) to track AI matching accuracy and system errors.
 
 ---

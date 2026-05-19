@@ -95,7 +95,7 @@ export const StudentDashboard = () => {
               )}
             </div>
 
-            <Card title="Attendance History">
+            <Card header="Attendance History" variant="outlined">
               {attendances.length === 0 ? (
                 <p className="empty-message">No attendance records found.</p>
               ) : (

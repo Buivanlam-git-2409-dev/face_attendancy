@@ -9,6 +9,7 @@ import {
   Select, 
   Alert 
 } from '../shared/ui'
+import { CameraStream } from '../features/attendance/CameraStream'
 import './Dashboard.css'
 
 export const FacultyDashboard = () => {
@@ -76,9 +77,15 @@ export const FacultyDashboard = () => {
 
         {error && <Alert variant="error" title="Error">{error}</Alert>}
 
+        <section className="camera-stream-section">
+          <Card header="Camera Stream" variant="outlined" padding="none">
+            <CameraStream />
+          </Card>
+        </section>
+
         <div className="dashboard-grid">
           <aside className="filters-sidebar">
-            <Card title="Filters">
+            <Card header="Filters" variant="outlined">
               <Select
                 label="Course"
                 value={filterCourse}
@@ -89,7 +96,7 @@ export const FacultyDashboard = () => {
           </aside>
 
           <section className="content-area">
-            <Card title="Attendance Records">
+            <Card header="Attendance Records" variant="outlined">
               {loading ? (
                 <div className="loading">Loading attendances...</div>
               ) : attendances.length === 0 ? (
