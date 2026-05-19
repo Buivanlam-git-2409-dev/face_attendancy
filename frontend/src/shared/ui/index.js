@@ -9,3 +9,4 @@ export * from './GradientButton/GradientButton';
 export * from './GlassPanel/GlassPanel';
 export * from './StatCard/StatCard';
 export * from './AttendanceTable/AttendanceTable';
+export * from './DashboardLayout';
