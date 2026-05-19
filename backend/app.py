@@ -86,11 +86,12 @@ app.add_middleware(
 
 @app.middleware("http")
 async def db_session_middleware(request, call_next):
-    try:
-        response = await call_next(request)
-        return response
-    finally:
-        db.session.remove()
+    with legacy_flask_app.app_context():
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            db.session.remove()
 
 
 @app.middleware("http")

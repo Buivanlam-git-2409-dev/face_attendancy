@@ -3,33 +3,47 @@
 from datetime import datetime
 
 from backend.extensions import db
-from backend.models import Faculty, Student
+from backend.models import Faculty, Student, User, Role
 from backend.security import hash_password, verify_password
 
 
 class AuthService:
     @staticmethod
+    def get_role(role_name: str) -> Role:
+        return Role.query.filter_by(name=role_name.upper()).first()
+
+    @staticmethod
+    def authenticate(email: str, password: str):
+        """Universal authentication using the User model"""
+        user = User.query.filter_by(email=email).first()
+        if user and verify_password(password, user.password):
+            return user
+        return None
+
+    @staticmethod
     def authenticate_student(email: str, password: str):
+        # Keep for backward compatibility
+        user = AuthService.authenticate(email, password)
+        if user and user.role and user.role.name == 'STUDENT':
+            return user.student_profile
+
+        # Fallback to old table if user not linked yet
         student = Student.query.filter_by(email=email).first()
-
-        if not student:
-            return None
-
-        if verify_password(password, student.password):
+        if student and verify_password(password, student.password):
             return student
-
         return None
 
     @staticmethod
     def authenticate_faculty(email: str, password: str):
+        # Keep for backward compatibility
+        user = AuthService.authenticate(email, password)
+        if user and user.role and user.role.name in ['FACULTY', 'ADMIN']:
+            return user.faculty_profile
+
+        # Fallback to old table if user not linked yet
         faculty = Faculty.query.filter_by(email=email).first()
-
-        if not faculty:
-            return None
-
-        if verify_password(password, faculty.password):
+        if faculty and verify_password(password, faculty.password):
             return faculty
-
         return None
 
     @staticmethod
@@ -74,16 +88,30 @@ class AuthService:
 
     @staticmethod
     def registerFaculty(name: str, course: str, email: str, password: str, isAdmin: bool):
-        existingFaculty = Faculty.query.filter_by(email=email).first()
+        existingUser = User.query.filter_by(email=email).first()
+        if existingUser:
+            return None, "User with this email already exists!"
 
-        if existingFaculty is not None:
-            return None, "Faculty with this email already exists!"
+        # 1. Create User
+        role_name = 'ADMIN' if isAdmin else 'FACULTY'
+        role = AuthService.get_role(role_name)
+        hashed = hash_password(password)
 
+        user = User(
+            email=email,
+            password=hashed,
+            role=role
+        )
+        db.session.add(user)
+        db.session.flush() # Get user.id
+
+        # 2. Create Faculty Profile
         faculty = Faculty(
+            user_id=user.id,
             name=name,
             course=course,
             email=email,
-            password=hash_password(password),
+            password=hashed, # redundant for now
             is_admin=isAdmin,
             registered_on=datetime.now(),
         )
@@ -102,17 +130,30 @@ class AuthService:
         password: str,
         picPath: str,
     ):
-        existingStudent = Student.query.filter_by(email=email).first()
+        existingUser = User.query.filter_by(email=email).first()
+        if existingUser:
+            return None, "User with this email already exists!"
 
-        if existingStudent is not None:
-            return None, "Student with this email already exists!"
+        # 1. Create User
+        role = AuthService.get_role('STUDENT')
+        hashed = hash_password(password)
 
+        user = User(
+            email=email,
+            password=hashed,
+            role=role
+        )
+        db.session.add(user)
+        db.session.flush()
+
+        # 2. Create Student Profile
         student = Student(
+            user_id=user.id,
             rollno=rollno,
             name=name,
             semester=semester,
             email=email,
-            password=hash_password(password),
+            password=hashed, # redundant for now
             pic_path=picPath,
             registered_on=datetime.now(),
         )

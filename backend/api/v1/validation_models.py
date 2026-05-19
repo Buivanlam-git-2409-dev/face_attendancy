@@ -263,16 +263,18 @@ class AttendanceListResponse(BaseModel):
 # Recognition Models
 # ============================================================================
 
-class RecognitionJobRequest(BaseModel):
+class CreateRecognitionJobRequest(BaseModel):
     """Start face recognition job request."""
     course: str = Field(..., min_length=1, description="Course name")
-    timeout: Optional[int] = Field(30, ge=5, le=300, description="Timeout in seconds (5-300)")
+    lecture_no: int = Field(..., description="Lecture number")
+    duration_seconds: Optional[int] = Field(30, ge=5, le=600, description="Duration in seconds (5-600)")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "course": "Computer Science",
-                "timeout": 30
+                "lecture_no": 1,
+                "duration_seconds": 30
             }
         }
 

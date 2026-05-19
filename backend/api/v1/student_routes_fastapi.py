@@ -14,7 +14,7 @@ from backend.services.attendance_service import AttendanceService
 from backend.services.auth_service import AuthService
 from backend.services.student_service import StudentService
 from backend.api.v1.dependencies import require_faculty, require_student, get_current_user
-from backend.models import Student
+from backend.models import Student, Faculty
 
 router = APIRouter()
 log = structlog.get_logger(__name__)
