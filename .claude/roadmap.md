@@ -57,6 +57,7 @@ This plan outlines the steps to transform the current "outdated" codebase into a
 - [x] **API Documentation:** Leverage FastAPI's automatic Swagger/OpenAPI docs for better frontend-backend integration.
 - [ ] **Logging & Monitoring:** Implement structured logging (e.g., `structlog`) to track AI matching accuracy and system errors.
 
+
 ---
 
 ## 🛠 Current (Legacy) Architecture Reference
