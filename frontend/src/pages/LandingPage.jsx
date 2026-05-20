@@ -1,234 +1,237 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Link } from 'react-router-dom'
 import { GradientButton } from '../shared/ui/GradientButton/GradientButton'
 import { GlassPanel } from '../shared/ui/GlassPanel/GlassPanel'
 import './LandingPage.css'
 
 const LandingPage = () => {
-  const [hoveredCard, setHoveredCard] = useState(null)
-
   const features = [
     {
-      id: 1,
-      title: 'Face Recognition',
-      subtitle: 'Attendance',
-      description:
-        'Fast and accurate facial recognition technology for seamless student and faculty check-ins.',
-      icon: '👤',
+      title: 'Face Check-in',
+      description: 'Students verify their identity with camera-based facial recognition before joining a class session.',
+      icon: 'face',
     },
     {
-      id: 2,
-      title: 'Real-time',
-      subtitle: 'Monitoring',
-      description:
-        'Live attendance tracking for faculty with instant notifications and detailed analytics.',
-      icon: '📊',
+      title: 'Faculty Control',
+      description: 'Faculty can review, create, edit, and correct attendance records when needed.',
+      icon: 'faculty',
     },
     {
-      id: 3,
-      title: 'Attendance',
-      subtitle: 'History',
-      description:
-        'Complete attendance records for students with visual trends and historical data.',
-      icon: '📋',
+      title: 'Student History',
+      description: 'Students can track their own attendance records securely from their dashboard.',
+      icon: 'history',
     },
     {
-      id: 4,
-      title: 'Secure',
-      subtitle: 'Access Control',
-      description:
-        'Role-based access with secure authentication for students, faculty, and administrators.',
-      icon: '🔐',
+      title: 'PostgreSQL Storage',
+      description: 'Attendance, users, roles, and face embeddings are stored in a structured database.',
+      icon: 'database',
     },
   ]
 
-  const benefits = [
-    {
-      icon: '⚡',
-      title: 'Lightning Fast',
-      description: 'Check-in in under 2 seconds with advanced facial recognition',
-    },
-    {
-      icon: '✓',
-      title: 'Accurate',
-      description: 'Eliminate manual errors with 99%+ recognition accuracy',
-    },
-    {
-      icon: '📱',
-      title: 'Real-time Dashboards',
-      description: 'View live attendance data from anywhere, anytime',
-    },
-    {
-      icon: '🛡️',
-      title: 'Enterprise Security',
-      description: 'Bank-grade encryption and role-based access control',
-    },
+  const steps = [
+    'Create student account',
+    'Register face image',
+    'Student checks in',
+    'Faculty reviews records',
   ]
 
   return (
     <div className="landing-page">
-      {/* Header/Navigation */}
       <header className="landing-header">
-        <div className="landing-container">
-          <div className="landing-logo">
-            <span className="logo-icon">📚</span>
-            <span className="logo-text">AttendanceAI</span>
-          </div>
+        <div className="landing-container landing-header__inner">
+          <Link to="/" className="landing-logo">
+            <span className="landing-logo__mark">AI</span>
+            <span className="landing-logo__text">Attendify</span>
+          </Link>
 
           <nav className="landing-nav">
-            <a href="#features" className="nav-link">
-              Features
-            </a>
-            <a href="#benefits" className="nav-link">
-              Benefits
-            </a>
-            <Link to="/login" className="nav-cta">
+            <a href="#features">Features</a>
+            <a href="#workflow">Workflow</a>
+            <Link to="/login" className="landing-nav__login">
               Login
             </Link>
           </nav>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="landing-hero">
-        <div className="landing-container">
-          <div className="hero-content fade-up-in">
-            <h1 className="hero-title">
-              Modern Facial Recognition
-              <br />
-              <span className="text-gradient">Attendance for Education</span>
-            </h1>
-
-            <p className="hero-subtitle">
-              Secure, fast, and reliable attendance management system for schools and universities.
-              Experience the future of student and faculty check-ins with cutting-edge AI technology.
-            </p>
-
-            <div className="hero-ctas">
-              <Link to="/login">
-                <GradientButton variant="navy-gold" size="lg">
-                  Get Started →
-                </GradientButton>
-              </Link>
-              <button className="cta-secondary">Learn More</button>
-            </div>
-
-            <p className="hero-trust">Trusted by educational institutions worldwide</p>
-          </div>
-
-          <div className="hero-visual fade-up-in" style={{ animationDelay: '200ms' }}>
-            <div className="hero-illustration">
-              <div className="illustration-box box-1" />
-              <div className="illustration-box box-2" />
-              <div className="illustration-box box-3" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="landing-features">
-        <div className="landing-container">
-          <div className="section-header">
-            <h2>Core Features</h2>
-            <p>Everything you need for modern attendance management</p>
-          </div>
-
-          <div className="features-grid">
-            {features.map((feature, idx) => (
-              <GlassPanel
-                key={feature.id}
-                className="feature-card"
-                animated
-                delay={idx * 100}
-                onMouseEnter={() => setHoveredCard(feature.id)}
-                onMouseLeave={() => setHoveredCard(null)}
-              >
-                <div
-                  className={`feature-card__icon ${
-                    hoveredCard === feature.id ? 'active' : ''
-                  }`}
-                >
-                  {feature.icon}
-                </div>
-
-                <h3 className="feature-card__title">
-                  {feature.title}
-                  <br />
-                  <span className="feature-subtitle">{feature.subtitle}</span>
-                </h3>
-
-                <p className="feature-card__description">{feature.description}</p>
-              </GlassPanel>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section id="benefits" className="landing-benefits">
-        <div className="landing-container">
-          <div className="section-header">
-            <h2>Why Choose AttendanceAI?</h2>
-            <p>Industry-leading features for educational institutions</p>
-          </div>
-
-          <div className="benefits-grid">
-            {benefits.map((benefit, idx) => (
-              <div
-                key={idx}
-                className="benefit-item fade-up-in"
-                style={{ animationDelay: `${idx * 100}ms` }}
-              >
-                <div className="benefit-icon">{benefit.icon}</div>
-                <h3>{benefit.title}</h3>
-                <p>{benefit.description}</p>
+      <main>
+        <section className="landing-hero">
+          <div className="landing-container landing-hero__grid">
+            <div className="landing-hero__content">
+              <div className="landing-eyebrow">
+                Facial Recognition Attendance System
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="landing-cta-final">
-        <div className="landing-container">
-          <GlassPanel className="cta-panel" elevated animated>
-            <div className="cta-content">
-              <h2>Ready to Transform Your Institution's Attendance?</h2>
-              <p>Join schools and universities that are modernizing their attendance systems.</p>
+              <h1>
+                Smarter attendance for modern classrooms.
+              </h1>
 
-              <div className="cta-buttons">
+              <p>
+                A secure attendance platform where students can check in with facial
+                recognition, while faculty manage records, corrections, and classroom
+                attendance data in real time.
+              </p>
+
+              <div className="landing-hero__actions">
                 <Link to="/login">
                   <GradientButton variant="navy-gold" size="lg">
-                    Start Your Journey
+                    Go to Login
                   </GradientButton>
                 </Link>
-                <button className="cta-secondary">Schedule a Demo</button>
+
+                <a href="#features" className="landing-secondary-link">
+                  Explore features
+                </a>
+              </div>
+
+              <div className="landing-hero__stats">
+                <div>
+                  <strong>JWT</strong>
+                  <span>Secure auth</span>
+                </div>
+                <div>
+                  <strong>Face ID</strong>
+                  <span>Camera check-in</span>
+                </div>
+                <div>
+                  <strong>PostgreSQL</strong>
+                  <span>Reliable storage</span>
+                </div>
               </div>
             </div>
-          </GlassPanel>
-        </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="landing-footer">
-        <div className="landing-container">
-          <div className="footer-content">
-            <div className="footer-brand">
-              <span className="logo-icon">📚</span>
-              <span>AttendanceAI</span>
+            <div className="landing-hero__visual">
+              <div className="dashboard-preview">
+                <div className="dashboard-preview__top">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+                <div className="dashboard-preview__body">
+                  <div className="scan-card">
+                    <div className="scan-card__frame">
+                      <div className="scan-card__face">
+                        <span className="scan-card__eye scan-card__eye--left" />
+                        <span className="scan-card__eye scan-card__eye--right" />
+                        <span className="scan-card__smile" />
+                      </div>
+                      <span className="scan-corner scan-corner--tl" />
+                      <span className="scan-corner scan-corner--tr" />
+                      <span className="scan-corner scan-corner--bl" />
+                      <span className="scan-corner scan-corner--br" />
+                    </div>
+
+                    <div>
+                      <h3>Face verified</h3>
+                      <p>Roll No: 12001 · Lecture 102</p>
+                    </div>
+                  </div>
+
+                  <div className="preview-list">
+                    <div className="preview-row">
+                      <span className="preview-dot is-green" />
+                      <div>
+                        <strong>Computer Science</strong>
+                        <small>Present · 09:30 AM</small>
+                      </div>
+                    </div>
+
+                    <div className="preview-row">
+                      <span className="preview-dot is-gold" />
+                      <div>
+                        <strong>Faculty Review</strong>
+                        <small>3 records updated today</small>
+                      </div>
+                    </div>
+
+                    <div className="preview-row">
+                      <span className="preview-dot is-blue" />
+                      <div>
+                        <strong>Student Dashboard</strong>
+                        <small>Attendance history synced</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="floating-badge floating-badge--top">
+                Live Camera
+              </div>
+              <div className="floating-badge floating-badge--bottom">
+                Check-in success
+              </div>
             </div>
-
-            <div className="footer-links">
-              <a href="#features">Features</a>
-              <a href="#benefits">Benefits</a>
-              <Link to="/login">Login</Link>
-            </div>
-
-            <p className="footer-copyright">
-              © {new Date().getFullYear()} AttendanceAI. All rights reserved.
-            </p>
           </div>
+        </section>
+
+        <section id="features" className="landing-section">
+          <div className="landing-container">
+            <div className="landing-section__header">
+              <span>Core modules</span>
+              <h2>Everything needed for attendance management</h2>
+              <p>
+                Built around student self check-in, faculty control, and secure
+                attendance records.
+              </p>
+            </div>
+
+            <div className="landing-feature-grid">
+              {features.map((feature) => (
+                <GlassPanel key={feature.title} className="landing-feature-card" animated>
+                  <div className={`landing-feature-card__icon icon-${feature.icon}`} />
+                  <h3>{feature.title}</h3>
+                  <p>{feature.description}</p>
+                </GlassPanel>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow" className="landing-workflow">
+          <div className="landing-container landing-workflow__grid">
+            <div>
+              <span className="landing-section-label">Workflow</span>
+              <h2>Simple flow from registration to check-in</h2>
+              <p>
+                Faculty prepares student profiles and face images. Students then
+                check in by camera, and the system stores the attendance result.
+              </p>
+            </div>
+
+            <div className="workflow-steps">
+              {steps.map((step, index) => (
+                <div className="workflow-step" key={step}>
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <strong>{step}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="landing-final-cta">
+          <div className="landing-container">
+            <div className="landing-final-cta__panel">
+              <h2>Ready to manage attendance smarter?</h2>
+              <p>
+                Login as faculty or student to start testing the complete attendance flow.
+              </p>
+              <Link to="/login">
+                <GradientButton variant="navy-gold" size="lg">
+                  Open Dashboard
+                </GradientButton>
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="landing-footer">
+        <div className="landing-container landing-footer__inner">
+          <span>Attendify</span>
+          <p>Facial Recognition Attendance System</p>
         </div>
       </footer>
     </div>
