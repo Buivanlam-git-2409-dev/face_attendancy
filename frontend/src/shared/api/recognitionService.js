@@ -42,6 +42,21 @@ export const recognitionService = {
 
     return unwrap(response)
   },
+  async studentCheckIn({ file, course, lecture_no }) {
+    const formData = new FormData()
+
+    formData.append('file', file)
+    formData.append('course', course)
+    formData.append('lecture_no', String(lecture_no))
+
+    const response = await apiClient.post('/me/recognition/check-in', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+
+    return unwrap(response)
+  },
 
   async runAttendanceJob(payload = {}) {
     const response = await apiClient.post('/recognition/attendance/run', payload)

@@ -11,6 +11,7 @@ export const CameraStream = ({
   course = '',
   lectureNo = '',
   disabled = false,
+  mode = 'faculty',
   onRecognitionSuccess,
 }) => {
   const videoRef = useRef(null)
@@ -141,11 +142,18 @@ export const CameraStream = ({
     try {
       const file = await captureFrameAsFile()
 
-      const result = await recognitionService.verifyFrame({
-        file,
-        course,
-        lecture_no: lectureNo,
-      })
+      const result =
+        mode === 'student'
+          ? await recognitionService.studentCheckIn({
+              file,
+              course,
+              lecture_no: lectureNo,
+            })
+          : await recognitionService.verifyFrame({
+              file,
+              course,
+              lecture_no: lectureNo,
+            })
 
       lastAttendanceRef.current = Date.now()
 
@@ -242,7 +250,7 @@ export const CameraStream = ({
           loading={isProcessing}
           disabled={isStarting || Boolean(cameraError) || disabled}
         >
-          Verify Current Frame
+          {mode === 'student' ? 'Check In With Face' : 'Verify Current Frame'}
         </Button>
       </div>
 

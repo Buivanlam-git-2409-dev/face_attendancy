@@ -68,3 +68,36 @@ td { padding: 1rem; border-bottom: 1px solid #eee; }
   opacity: 0.6;
   cursor: not-allowed;
 }
+.student-check-in {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.student-check-in__form {
+  margin-bottom: 1.5rem;
+}
+
+.student-check-in__form h2 {
+  margin: 0 0 0.5rem;
+  color: var(--color-navy);
+}
+
+.student-check-in__hint {
+  color: #666;
+  margin: 0 0 1rem;
+}
+
+.student-check-in__inputs {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .student-check-in__inputs {
+    grid-template-columns: 1fr;
+  }
+}

@@ -27,7 +27,38 @@ export const FacultyDashboard = () => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [faceRollno, setFaceRollno] = useState('12001')
+  const [faceFile, setFaceFile] = useState(null)
+  const [uploadingFace, setUploadingFace] = useState(false)
 
+  const handleUploadFace = async (event) => {
+    event.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (!faceRollno) {
+      setError('Please enter student roll number')
+      return
+    }
+
+    if (!faceFile) {
+      setError('Please choose a face image')
+      return
+    }
+
+    setUploadingFace(true)
+
+    try {
+      await studentService.uploadStudentFace(faceRollno, faceFile)
+      setSuccess('Student face image uploaded and embedding created successfully')
+      setFaceFile(null)
+      await loadDashboardData()
+    } catch (err) {
+      setError(err.message || 'Unable to upload face image')
+    } finally {
+      setUploadingFace(false)
+    }
+  }
   const loadDashboardData = async () => {
     setLoading(true)
     setError('')
@@ -175,6 +206,37 @@ export const FacultyDashboard = () => {
             Refresh
           </Button>
         </div>
+        <div className="face-upload-section">
+        <h2>Upload Student Face</h2>
+        <p className="face-upload-section__hint">
+          Upload one clear face image to create or update the student's FaceEmbedding.
+        </p>
+
+        <form className="attendance-form" onSubmit={handleUploadFace}>
+          <Input
+            label="Student Roll Number"
+            type="number"
+            value={faceRollno}
+            onChange={(e) => setFaceRollno(e.target.value)}
+            placeholder="12001"
+            required
+          />
+
+          <div className="form-group">
+            <label className="form-label">Face Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFaceFile(e.target.files?.[0] || null)}
+              required
+            />
+          </div>
+
+          <Button type="submit" loading={uploadingFace}>
+            Upload Face Image
+          </Button>
+        </form>
+      </div>
 
         {error && (
           <Alert variant="error">

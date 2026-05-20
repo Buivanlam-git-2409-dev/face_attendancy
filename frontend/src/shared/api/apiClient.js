@@ -26,8 +26,7 @@ apiClient.interceptors.request.use(
 )
 
 // Xử lý khi token hết hạn hoặc không hợp lệ
-apiClient.interceptors.response.use(
-  (response) => response,
+(response) => response,
   (error) => {
     const status = error.response?.status
     const requestUrl = error.config?.url || ''
@@ -35,6 +34,15 @@ apiClient.interceptors.response.use(
 
     const isAuthMeRequest = requestUrl.endsWith('/auth/me')
     const isLoginPage = currentPath === '/login'
+
+    const apiError =
+      error.response?.data?.error ||
+      error.response?.data?.detail ||
+      null
+
+    if (apiError?.message) {
+      error.message = apiError.message
+    }
 
     if (status === 401 && !isAuthMeRequest && !isLoginPage) {
       localStorage.removeItem(TOKEN_KEY)
@@ -45,7 +53,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error)
-  }
-)
+}
+
 
 export default apiClient

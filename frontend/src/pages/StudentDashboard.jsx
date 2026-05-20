@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { DashboardLayout, Card, AttendanceTable, Alert } from '../shared/ui'
+import CameraStream from '../features/attendance/CameraStream'
+import { DashboardLayout, Card, AttendanceTable, Alert, Input, Button } from '../shared/ui'
 import { attendanceService } from '../shared/api/attendanceService'
 import './StudentDashboard.css'
 
@@ -8,6 +9,10 @@ export const StudentDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const [checkInForm, setCheckInForm] = useState({
+    course: 'Computer Science',
+    lecture_no: '',
+  })
   const fetchAttendance = async () => {
     setLoading(true)
     setError('')
@@ -44,7 +49,18 @@ export const StudentDashboard = () => {
       percentage,
     }
   }, [records])
+  const handleCheckInChange = (event) => {
+    const { name, value } = event.target
 
+    setCheckInForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const handleCheckInSuccess = async () => {
+    await fetchAttendance()
+  }
   return (
     <DashboardLayout>
       <div className="student-dashboard">
@@ -72,7 +88,43 @@ export const StudentDashboard = () => {
             <p>{stats.percentage}%</p>
           </Card>
         </div>
+        <div className="student-check-in">
+          <div className="student-check-in__form">
+            <h2>Self Check-in</h2>
+            <p className="student-check-in__hint">
+              Enter your course and lecture number, then verify your face to mark attendance.
+            </p>
 
+            <div className="student-check-in__inputs">
+              <Input
+                label="Course"
+                name="course"
+                value={checkInForm.course}
+                onChange={handleCheckInChange}
+                placeholder="Computer Science"
+                required
+              />
+
+              <Input
+                label="Lecture Number"
+                name="lecture_no"
+                type="number"
+                value={checkInForm.lecture_no}
+                onChange={handleCheckInChange}
+                placeholder="1"
+                required
+              />
+            </div>
+          </div>
+
+          <CameraStream
+            mode="student"
+            course={checkInForm.course}
+            lectureNo={checkInForm.lecture_no}
+            disabled={!checkInForm.course || checkInForm.lecture_no === ''}
+            onRecognitionSuccess={handleCheckInSuccess}
+          />
+        </div>
         <div className="attendance-history">
           <div className="student-dashboard__section-header">
             <h2>Attendance History</h2>

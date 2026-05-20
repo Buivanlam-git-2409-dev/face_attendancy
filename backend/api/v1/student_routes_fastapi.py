@@ -11,6 +11,12 @@ Routes:
 
 from fastapi import APIRouter, Depends, HTTPException
 import structlog
+from pathlib import Path
+
+import face_recognition
+from fastapi import File, UploadFile
+from backend.extensions import db
+from backend.models import FaceEmbedding
 
 from backend.api.error_handler import ErrorCode, error_response, success_response
 from backend.api.v1.dependencies import get_current_user, require_faculty, require_student
@@ -223,3 +229,131 @@ async def get_my_attendances_api(current_student: Student = Depends(require_stud
             exc_info=e,
         )
         internal_error("Failed to retrieve attendance")
+        
+@router.post("/students/{rollno}/face")
+async def upload_student_face_api(
+    rollno: int,
+    file: UploadFile = File(...),
+    current_faculty: Faculty = Depends(require_faculty),
+):
+    """
+    Upload student face image and create FaceEmbedding.
+    Faculty only.
+    """
+    log.info(
+        "upload_student_face_request",
+        rollno=rollno,
+        faculty=current_faculty.name,
+        filename=file.filename,
+    )
+
+    try:
+        student = Student.query.filter_by(rollno=rollno).first()
+
+        if not student:
+            not_found("Student not found")
+
+        if not file.content_type or not file.content_type.startswith("image/"):
+            response = error_response(
+                ErrorCode.BAD_REQUEST,
+                "Uploaded file must be an image",
+                400,
+            )
+            raise HTTPException(status_code=400, detail=response["error"])
+
+        upload_dir = Path("backend/static/images/users")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        extension = Path(file.filename or "").suffix.lower()
+        if extension not in [".jpg", ".jpeg", ".png"]:
+            extension = ".jpg"
+
+        image_path = upload_dir / f"{rollno}{extension}"
+
+        contents = await file.read()
+        if not contents:
+            response = error_response(
+                ErrorCode.BAD_REQUEST,
+                "Uploaded file is empty",
+                400,
+            )
+            raise HTTPException(status_code=400, detail=response["error"])
+
+        image_path.write_bytes(contents)
+
+        image = face_recognition.load_image_file(str(image_path))
+        face_locations = face_recognition.face_locations(image)
+
+        if len(face_locations) == 0:
+            response = error_response(
+                ErrorCode.BAD_REQUEST,
+                "No face found in image",
+                400,
+            )
+            raise HTTPException(status_code=400, detail=response["error"])
+
+        if len(face_locations) > 1:
+            response = error_response(
+                ErrorCode.BAD_REQUEST,
+                "More than one face found. Please upload an image with exactly one face.",
+                400,
+            )
+            raise HTTPException(status_code=400, detail=response["error"])
+
+        encodings = face_recognition.face_encodings(image, face_locations)
+
+        if not encodings:
+            response = error_response(
+                ErrorCode.BAD_REQUEST,
+                "Could not generate face embedding",
+                400,
+            )
+            raise HTTPException(status_code=400, detail=response["error"])
+
+        old_embeddings = FaceEmbedding.query.filter_by(
+            student_id=student.id,
+            is_active=True,
+        ).all()
+
+        for embedding in old_embeddings:
+            embedding.is_active = False
+
+        new_embedding = FaceEmbedding(
+            student_id=student.id,
+            embedding=encodings[0].tolist(),
+            source_image_path=str(image_path),
+            quality_score=1.0,
+            is_active=True,
+        )
+
+        db.session.add(new_embedding)
+        db.session.commit()
+
+        log.info(
+            "upload_student_face_success",
+            rollno=rollno,
+            student_id=student.id,
+            embedding_id=new_embedding.id,
+        )
+
+        return success_response(
+            {
+                "message": "Face image uploaded and embedding created successfully",
+                "rollno": student.rollno,
+                "studentName": student.name,
+                "embeddingId": new_embedding.id,
+                "imagePath": str(image_path),
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.session.rollback()
+        log.error(
+            "upload_student_face_error",
+            rollno=rollno,
+            error=str(e),
+            exc_info=e,
+        )
+        internal_error("Failed to upload student face")

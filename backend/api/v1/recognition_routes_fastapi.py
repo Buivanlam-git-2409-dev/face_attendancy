@@ -12,11 +12,11 @@ import face_recognition
 import numpy as np
 import structlog
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-
+from backend.services.attendance_service import AttendanceService
+from backend.models import Faculty, Student
 from backend.api.error_handler import ErrorCode, error_response, success_response
-from backend.api.v1.dependencies import require_faculty
+from backend.api.v1.dependencies import require_faculty, require_student
 from backend.api.v1.validation_models import CreateRecognitionJobRequest
-from backend.models import Faculty
 from backend.services.face_recognition_service import FaceRecognitionService
 from backend.services.recognition_job_service import RecognitionJobService
 
@@ -64,7 +64,57 @@ def queue_recognition_job(
 
     return job
 
+async def recognize_faces_from_upload(file: UploadFile):
+    contents = await file.read()
 
+    if not contents:
+        bad_request("Uploaded file is empty")
+
+    nparr = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    if image is None:
+        bad_request("Invalid image file")
+
+    known_face_encodings, known_face_names = (
+        FaceRecognitionService.loadKnownFacesFromDb()
+    )
+
+    if not known_face_encodings:
+        return {
+            "detectedFaces": 0,
+            "results": [],
+            "message": "No known faces available",
+        }
+
+    rgb_frame = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    face_locations = face_recognition.face_locations(rgb_frame)
+    face_encodings = face_recognition.face_encodings(
+        rgb_frame,
+        face_locations,
+    )
+
+    results = []
+
+    for face_encoding in face_encodings:
+        identity = FaceRecognitionService.resolveFaceName(
+            face_encoding,
+            known_face_encodings,
+            known_face_names,
+        )
+
+        results.append(
+            {
+                "identity": identity,
+                "matched": identity != "Unknown",
+            }
+        )
+
+    return {
+        "detectedFaces": len(face_encodings),
+        "results": results,
+    }
 @router.post("/recognition/verify")
 async def verify_face_api(
     file: UploadFile = File(...),
@@ -239,3 +289,97 @@ async def get_recognition_job_api(
             exc_info=e,
         )
         internal_error("Failed to retrieve recognition job")
+
+@router.post("/me/recognition/check-in")
+async def student_check_in_by_face_api(
+    file: UploadFile = File(...),
+    course: str = Form(...),
+    lecture_no: int = Form(...),
+    current_student: Student = Depends(require_student),
+):
+    """
+    Student self check-in by face recognition.
+
+    Student can only mark attendance for their own account.
+    """
+    log.info(
+        "student_face_check_in_request",
+        rollno=current_student.rollno,
+        course=course,
+        lecture_no=lecture_no,
+    )
+
+    try:
+        recognition_result = await recognize_faces_from_upload(file)
+
+        detected_faces = recognition_result.get("detectedFaces", 0)
+        results = recognition_result.get("results", [])
+
+        if detected_faces == 0:
+            response = error_response(
+                ErrorCode.BAD_REQUEST,
+                "No face detected in the image",
+                400,
+            )
+            raise HTTPException(status_code=400, detail=response["error"])
+
+        matched_identities = [
+            item.get("identity")
+            for item in results
+            if item.get("identity") and item.get("identity") != "Unknown"
+        ]
+
+        current_rollno = str(current_student.rollno)
+
+        if current_rollno not in matched_identities:
+            response = error_response(
+                ErrorCode.FORBIDDEN,
+                "Recognized face does not match the logged-in student",
+                403,
+                details={
+                    "expectedRollno": current_rollno,
+                    "recognizedIdentities": matched_identities,
+                },
+            )
+            raise HTTPException(status_code=403, detail=response["error"])
+
+        attendance, error = AttendanceService.markAttendance(
+            rollNo=current_student.rollno,
+            course=course,
+            lectureNo=lecture_no,
+            markedBy=f"Student:{current_student.rollno}",
+        )
+
+        if error:
+            response = error_response(
+                ErrorCode.CONFLICT,
+                error,
+                409,
+            )
+            raise HTTPException(status_code=409, detail=response["error"])
+
+        log.info(
+            "student_face_check_in_success",
+            rollno=current_student.rollno,
+            course=course,
+            lecture_no=lecture_no,
+        )
+
+        return success_response(
+            {
+                "message": "Check-in successful",
+                "attendance": attendance,
+                "recognition": recognition_result,
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(
+            "student_face_check_in_error",
+            rollno=current_student.rollno,
+            error=str(e),
+            exc_info=e,
+        )
+        internal_error("Student check-in failed")

@@ -51,4 +51,20 @@ export const studentService = {
 
     return unwrap(response)
   },
+  async uploadStudentFace(rollNo, file) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await apiClient.post(
+      `/students/${rollNo}/face`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    )
+
+    return unwrap(response)
+  },
 }
