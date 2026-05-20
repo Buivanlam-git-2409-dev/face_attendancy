@@ -89,8 +89,7 @@ face_attendancy/
 │
 ├── requirements.txt
 ├── README.md
-├── STATUS.md
-└── TESTING.md
+
 ```
 
 ---
