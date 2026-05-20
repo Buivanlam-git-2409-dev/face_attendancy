@@ -47,10 +47,7 @@ export const CameraStream = ({
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
+        video: true,
         audio: false,
       })
 
@@ -61,7 +58,21 @@ export const CameraStream = ({
         await videoRef.current.play()
       }
     } catch (error) {
-      setCameraError('Camera unavailable. Check permissions and try again.')
+        console.error('Camera error:', error)
+        let message = 'Camera unavailable. Check permissions and try again.'
+        if (error.name === 'NotAllowedError') {
+          message = 'Camera permission was denied. Please allow camera access in your browser.'
+        }
+        if (error.name === 'NotFoundError') {
+          message = 'No camera device found on this computer.'
+        }
+        if (error.name === 'NotReadableError') {
+          message = 'Camera is being used by another app. Close Zoom/Teams/Camera app and try again.'
+        }
+        if (error.name === 'OverconstrainedError') {
+          message = 'Camera does not support the requested resolution.'
+        }
+        setCameraError(message)
     } finally {
       setIsStarting(false)
     }
